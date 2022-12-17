@@ -1,0 +1,19 @@
+[solitaire]
+dealmode = 3
+fullscreen = false
+
+[leaderboard]
+high_score = 120
+fastest_time = 30
+lowest_moves = 20
+  [leaderboard.1]
+  seed = 3000
+  score = 120
+  time = 30
+  moves = 20
+  achieved = 1979-05-27T07:32:00Z
+
+[textures]
+  [textures.SBS_2dPokerPack]
+  directory = "SBS_2dPokerPack"
+  last_used = 1979-05-27T07:32:00Z
