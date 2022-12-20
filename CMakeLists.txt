@@ -2,13 +2,20 @@ cmake_minimum_required(VERSION 3.15)
 project(solitaire)
 
 add_subdirectory(libs/raylib EXCLUDE_FROM_ALL)
+add_subdirectory(libs/raylib-nuklear EXCLUDE_FROM_ALL)
 
 set(CMAKE_C_STANDARD 11)
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 include_directories(${CMAKE_SOURCE_DIR}/libs/tomlc99)
+include_directories(${CMAKE_SOURCE_DIR}/libs/raylib-nuklear/include)
 
 add_executable(${PROJECT_NAME} 
+  src/gfx/animated.c
+  src/gfx/cards.c
+  src/gfx/layout.c
+  src/io/config.c
+  src/io/textures.c
   src/scenes/menu.c 
   src/solitaire.c 
   src/main.c 
@@ -17,7 +24,7 @@ add_executable(${PROJECT_NAME}
   libs/tomlc99/toml.c
 )
 
-target_link_libraries(${PROJECT_NAME} raylib)
+target_link_libraries(${PROJECT_NAME} raylib raylib_nuklear)
 
 if (APPLE)
     target_link_libraries(${PROJECT_NAME} "-framework IOKit")

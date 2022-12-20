@@ -287,6 +287,10 @@ int solitaire_validate_move(Solitaire *solitaire, Move *move, MoveData *data)
         {
             onto = solitaire->foundations[move->to_x][foundation_len - 1];
         }
+        if (onto)
+        {
+            printf("moving card (%d,%d) onto foundation (%d, %d)\n", moving->suit, moving->value, onto->suit, onto->value);
+        }
 
         if (onto && !follows_same_suit(*moving, *onto))
         {

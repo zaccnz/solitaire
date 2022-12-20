@@ -40,7 +40,7 @@ int follows_same_suit(Card first, Card second);
 int follows_different_suit(Card first, Card second);
 
 #define MAX_CARDS (SUIT_MAX * VALUE_MAX)
-#define MAX_MOVES 128 // TODO: increase this
+#define MAX_MOVES 1024
 
 typedef enum MOVEFROM
 {
@@ -53,8 +53,8 @@ typedef enum MOVEFROM
 typedef enum MOVETO
 {
     MOVE_TO_NONE,
-    MOVE_TO_TABLEU,
     MOVE_TO_FOUNDATION,
+    MOVE_TO_TABLEU,
 } MoveTo;
 
 typedef enum MOVETYPE

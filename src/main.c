@@ -1,3 +1,4 @@
+#include "gfx/animated.h"
 #include "scene.h"
 #include "solitaire.h"
 #include "scenes/menu.h"
@@ -5,6 +6,11 @@
 #include <raylib.h>
 #include <string.h>
 #include <stdlib.h>
+
+#include <rlgl.h>
+
+#define RAYLIB_NUKLEAR_IMPLEMENTATION
+#include <raylib-nuklear.h>
 
 // todo: replace with TOML
 
@@ -60,6 +66,14 @@ Texture2D *get_card_texture(Card *card, Rectangle *frame, Texture2D *back, Textu
     return texture;
 }
 
+float rotation = 0.0;
+
+int animation_update_test(float progress, void *data)
+{
+    rotation = progress;
+    printf("animation progress: %.02f\n", progress);
+}
+
 int main(void)
 {
     Solitaire solitaire = solitaire_create((SolitaireConfig){
@@ -76,6 +90,7 @@ int main(void)
     int foundation_masks[4] = {-1, -1, -1, -1};
     int waste_mask = -1;
 
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(800, 600, "solitaire");
 
     Texture2D back = LoadTexture("res/SBS_2dPokerPack/Top-Down/Cards/Back - Top Down 88x124.png");
@@ -91,8 +106,12 @@ int main(void)
         (float)CARD_HEIGHT,
     };
 
+    struct nk_context *ctx = InitNuklear(10);
+
     while (!WindowShouldClose())
     {
+        anim_update();
+
         if (IsKeyPressed(KEY_R))
         {
             solitaire = solitaire_create((SolitaireConfig){
@@ -118,6 +137,15 @@ int main(void)
         if (IsKeyPressed(KEY_X))
         {
             solitaire_redo(&solitaire);
+        }
+        if (IsKeyPressed(KEY_A))
+        {
+            printf("creating animation\n");
+            AnimationConfig config = {
+                .on_update = animation_update_test,
+                .duration = 3.0f,
+            };
+            anim_create(config, NULL);
         }
 
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
@@ -295,6 +323,7 @@ int main(void)
                 };
                 if (CheckCollisionPointRec(pos, bbox))
                 {
+                    printf("dropping on foundation!\n");
                     target = MOVE_TO_FOUNDATION;
                     hit = 1;
                     hit_x = i;
@@ -355,6 +384,7 @@ int main(void)
                     .from_y = move_from_y,
                     .to_x = hit_x,
                 };
+                printf("making move %d %d %d %d %d\n", move.from, move.to, move.from_x, move.from_y, move.to_x);
                 solitaire_make_move(&solitaire, move);
             }
 
@@ -372,6 +402,18 @@ int main(void)
             free(dnd);
             dnd = NULL;
         }
+
+        UpdateNuklear(ctx);
+
+        /*
+        if (nk_begin(ctx, "Nuklear", nk_rect(100, 500, 50, 50), NULL))
+        {
+            if (nk_button_label(ctx, "Button"))
+            {
+                // Button was clicked!
+            }
+        }
+        nk_end(ctx);*/
 
         // scene_update(0.0);
         BeginDrawing();
@@ -424,8 +466,15 @@ int main(void)
             };
 
             Vector2 position = {800 / 2 + (float)(CARD_WIDTH * 3.5) - CARD_WIDTH, 10};
+            Vector2 zero = {-CARD_WIDTH / 2, -CARD_HEIGHT / 2};
             Texture2D *texture = get_card_texture(&card, &frame, &back, &clubs, &hearts, &spades, &diamonds);
-            DrawTextureRec(*texture, frame, position, WHITE);
+
+            rlPushMatrix();
+            printf("rotation: %f\n", 360.0 * rotation);
+            rlTranslatef(800 / 2 + (float)(CARD_WIDTH * 3.0), 10.0 + (float)CARD_HEIGHT * 0.5, 0.0);
+            rlRotatef(360.0 * rotation, 0.0, 1.0, 0.0);
+            DrawTextureRec(*texture, frame, zero, WHITE);
+            rlPopMatrix();
         }
 
         for (int i = 0; i < 7; i++)
@@ -475,11 +524,20 @@ int main(void)
 
         DrawText("controls: [r] restart [z] undo [x] redo", 10, 574, 16, GRAY);
 
+        DrawNuklear(ctx);
+
         EndDrawing();
     }
 
+    anim_release();
+
     // scene_pop();
     UnloadTexture(clubs);
+    UnloadTexture(hearts);
+    UnloadTexture(spades);
+    UnloadTexture(diamonds);
+    UnloadTexture(back);
+    UnloadNuklear(ctx);
 
     CloseWindow();
 

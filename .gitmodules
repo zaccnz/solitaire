@@ -4,3 +4,6 @@
 [submodule "libs/tomlc99"]
 	path = libs/tomlc99
 	url = https://github.com/cktan/tomlc99.git
+[submodule "libs/raylib-nuklear"]
+	path = libs/raylib-nuklear
+	url = https://github.com/RobLoach/raylib-nuklear.git
