@@ -3,6 +3,7 @@
 #include <raylib.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #define ANIMATION_MAX 256
 
@@ -97,17 +98,19 @@ void anim_update()
 
         animation = animations[i];
         animation->elapsed += delta;
+        int looping = animation->config.duration == 0.0;
+        int result;
         if (animation->config.on_update)
         {
-            animation->config.on_update(animation->elapsed / animation->config.duration, animation->config.data);
+            result = animation->config.on_update(looping ? delta : animation->elapsed / animation->config.duration, animation->config.data);
         }
 
-        if (animation->elapsed > animation->config.duration)
+        if (looping && !result)
         {
-            if (animation->config.on_complete)
-            {
-                animation->config.on_complete(animation->config.data);
-            }
+            anim_clear(i, 1);
+        }
+        else if (!looping && animation->elapsed > animation->config.duration)
+        {
             anim_clear(i, 1);
         }
     }

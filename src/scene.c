@@ -1,5 +1,6 @@
 #include "scene.h"
 
+#include <stdio.h>
 #include <raylib.h>
 
 #define MAX_SCENES 20
@@ -69,6 +70,6 @@ void scene_update(double delta)
     {
         Scene_UpdateFunc update = scenes[scene_count - 1]->update;
         if (update)
-            render(delta);
+            update(delta);
     }
 }

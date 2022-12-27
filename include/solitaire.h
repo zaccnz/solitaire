@@ -34,8 +34,6 @@ typedef struct Card
     int shown;
 } Card;
 
-int ntlen(void **array);
-
 int follows_same_suit(Card first, Card second);
 int follows_different_suit(Card first, Card second);
 
@@ -93,7 +91,7 @@ typedef struct Solitaire
     Card *deck;
 
     Card *tableu[7][MAX_CARDS];
-    Card *foundations[4][VALUE_MAX];
+    Card *foundations[4][VALUE_MAX + 1];
     Card *talon[MAX_CARDS];
     Card *stock[MAX_CARDS];
 
@@ -115,7 +113,7 @@ int solitaire_undo(Solitaire *solitaire);
 int solitaire_redo(Solitaire *solitaire);
 
 // more difficult
-int solitaire_find_move(Solitaire *solitaire, MoveFrom from, int a, int b);
+int solitaire_find_move(Solitaire *solitaire, MoveFrom from, int from_x, int from_y, Move *move);
 int solitaire_make_trivial_move(Solitaire *solitaire);
 int solitaire_is_solvable(Solitaire *solitaire);
 int solitaire_is_trivial(Solitaire *solitaire);

@@ -1,19 +1,11 @@
 #include "solitaire.h"
 
+#include "util.h"
+
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <stdio.h>
-
-int ntlen(void **array)
-{
-    int i = 0;
-    while (array[i] != NULL)
-    {
-        i++;
-    }
-    return i;
-}
 
 int follows_same_suit(Card first, Card second)
 {
@@ -151,7 +143,152 @@ int solitaire_push_move(Solitaire *solitaire, Move *move, MoveData *data)
 
     solitaire->move_end = solitaire->move_index + 1;
 
-    // return
+    return 1;
+}
+
+int solitaire_validate_move(Solitaire *solitaire, Move *move, MoveData *data)
+{
+    Card *onto = NULL;
+    Card *moving = NULL;
+
+    switch (move->from)
+    {
+    case MOVE_FROM_FOUNDATION:
+    {
+        int foundation_len = ntlen(solitaire->foundations[move->from_x]);
+        if (foundation_len == 0)
+        {
+            printf("cannot move card from foundation %d - its empty\n", move->from_x);
+            return 0;
+        }
+        moving = solitaire->foundations[move->from_x][foundation_len - 1];
+        break;
+    }
+    case MOVE_FROM_TALON:
+    {
+        int talon_len = ntlen(solitaire->talon);
+        if (talon_len == 0)
+        {
+            printf("cannot move card from talon - its empty\n");
+            return 0;
+        }
+        moving = solitaire->talon[talon_len - 1];
+        break;
+    }
+    case MOVE_FROM_TABLEU:
+    {
+        int tableu_len = ntlen(solitaire->tableu[move->from_x]);
+        if (tableu_len == 0 || tableu_len < data->cards_moved)
+        {
+            printf("cannot move card from tableu %d - its empty\n", move->from_x);
+            return 0;
+        }
+        moving = solitaire->tableu[move->from_x][tableu_len - data->cards_moved];
+        break;
+    }
+    }
+
+    switch (move->to)
+    {
+    case MOVE_TO_FOUNDATION:
+    {
+        int foundation_len = ntlen(solitaire->foundations[move->to_x]);
+        if (foundation_len > 0)
+        {
+            onto = solitaire->foundations[move->to_x][foundation_len - 1];
+        }
+        if (onto)
+        {
+            printf("moving card (%d,%d) onto foundation (%d, %d)\n", moving->suit, moving->value, onto->suit, onto->value);
+        }
+
+        if (onto && !follows_same_suit(*moving, *onto))
+        {
+            printf("cannot move card (%d,%d) onto foundation (%d, %d)\n", moving->suit, moving->value, onto->suit, onto->value);
+            return 0;
+        }
+        else if (!onto && moving->value != ACE)
+        {
+            printf("cannot move card (%d,%d) onto empty foundation\n", moving->suit, moving->value);
+            return 0;
+        }
+        break;
+    }
+    case MOVE_TO_TABLEU:
+    {
+        int tableu_len = ntlen(solitaire->tableu[move->to_x]);
+        if (tableu_len > 0)
+        {
+            onto = solitaire->tableu[move->to_x][tableu_len - 1];
+        }
+
+        if (onto && !follows_different_suit(*onto, *moving))
+        {
+            printf("cannot move card (%d,%d) onto tableu card (%d, %d)\n", moving->suit, moving->value, onto->suit, onto->value);
+            return 0;
+        }
+        else if (!onto && moving->value != KING)
+        {
+            printf("cannot move card (%d,%d) onto empty tableu column\n", moving->suit, moving->value);
+            return 0;
+        }
+        break;
+    }
+    }
+
+    return 1;
+}
+
+int solitaire_make_move_data(Solitaire *solitaire, Move *move, MoveData *data)
+{ // figure out what 'data' we should set
+    switch (move->type)
+    {
+    case MOVE_CYCLE_STOCK:
+    {
+        int stock = ntlen(solitaire->stock);
+        if (stock == 0)
+        {
+            data->return_to_stock = 1;
+        }
+        else
+        {
+            data->cards_moved = min(stock, solitaire->config.deal_three ? 3 : 1);
+        }
+    }
+    break;
+    case MOVE_CARD:
+    {
+        if (move->from == MOVE_FROM_TABLEU)
+        {
+            int tableu_len = ntlen(solitaire->tableu[move->from_x]);
+            if (move->from_y >= tableu_len)
+            {
+                printf("from_y should be less than tableu length\n");
+                return 0;
+            }
+            int cards = tableu_len - move->from_y;
+            if (move->to == MOVE_TO_FOUNDATION && cards > 1)
+            {
+                printf("can only move one card to foundation at a time\n");
+                return 0;
+            }
+            data->cards_moved = cards;
+            if (move->from_y > 0)
+            {
+                data->card_revealed = !solitaire->tableu[move->from_x][move->from_y - 1]->shown;
+            }
+        }
+        else
+        {
+            data->cards_moved = 1;
+            if (move->from_y != -1)
+            {
+                printf("from_y should not be set if moving from foudation or talon\n");
+                return 0;
+            }
+        }
+    }
+    }
     return 1;
 }
 
@@ -181,50 +318,9 @@ int solitaire_make_move(Solitaire *solitaire, Move move)
     }
     memset(data, 0, sizeof(MoveData));
 
-    // figure out what 'data' we should set
-    switch (move.type)
+    if (!solitaire_make_move_data(solitaire, moveptr, data))
     {
-    case MOVE_CYCLE_STOCK:
-        int stock = ntlen(solitaire->stock);
-        if (stock == 0)
-        {
-            data->return_to_stock = 1;
-        }
-        else
-        {
-            data->cards_moved = min(stock, solitaire->config.deal_three ? 3 : 1);
-        }
-        break;
-    case MOVE_CARD:
-        if (move.from == MOVE_FROM_TABLEU)
-        {
-            int tableu_len = ntlen(solitaire->tableu[move.from_x]);
-            if (move.from_y >= tableu_len)
-            {
-                printf("from_y should be less than tableu length\n");
-                return 0;
-            }
-            int cards = tableu_len - move.from_y;
-            if (move.to == MOVE_TO_FOUNDATION && cards > 1)
-            {
-                printf("can only move one card to foundation at a time\n");
-                return 0;
-            }
-            data->cards_moved = cards;
-            if (move.from_y > 0)
-            {
-                data->card_revealed = !solitaire->tableu[move.from_x][move.from_y - 1]->shown;
-            }
-        }
-        else
-        {
-            data->cards_moved = 1;
-            if (move.from_y != -1)
-            {
-                printf("from_y should not be set if moving from foudation or talon\n");
-                return 0;
-            }
-        }
+        return 0;
     }
 
     if (!solitaire_validate_move(solitaire, moveptr, data))
@@ -241,89 +337,6 @@ int solitaire_make_move(Solitaire *solitaire, Move move)
 
     // do move
     return solitaire_redo(solitaire);
-}
-
-int solitaire_validate_move(Solitaire *solitaire, Move *move, MoveData *data)
-{
-    Card *onto = NULL;
-    Card *moving = NULL;
-
-    switch (move->from)
-    {
-    case MOVE_FROM_FOUNDATION:
-        int foundation_len = ntlen(solitaire->foundations[move->from_x]);
-        if (foundation_len == 0)
-        {
-            printf("cannot move card from foundation %d - its empty\n", move->from_x);
-            return 0;
-        }
-        moving = solitaire->foundations[move->from_x][foundation_len - 1];
-        break;
-    case MOVE_FROM_TALON:
-        int talon_len = ntlen(solitaire->talon);
-        if (talon_len == 0)
-        {
-            printf("cannot move card from talon - its empty\n");
-            return 0;
-        }
-        moving = solitaire->talon[talon_len - 1];
-        break;
-    case MOVE_FROM_TABLEU:
-        int tableu_len = ntlen(solitaire->tableu[move->from_x]);
-        if (tableu_len == 0 || tableu_len < data->cards_moved)
-        {
-            printf("cannot move card from tableu %d - its empty\n", move->from_x);
-            return 0;
-        }
-        moving = solitaire->tableu[move->from_x][tableu_len - data->cards_moved];
-        break;
-    }
-
-    switch (move->to)
-    {
-    case MOVE_TO_FOUNDATION:
-        int foundation_len = ntlen(solitaire->foundations[move->to_x]);
-        if (foundation_len > 0)
-        {
-            onto = solitaire->foundations[move->to_x][foundation_len - 1];
-        }
-        if (onto)
-        {
-            printf("moving card (%d,%d) onto foundation (%d, %d)\n", moving->suit, moving->value, onto->suit, onto->value);
-        }
-
-        if (onto && !follows_same_suit(*moving, *onto))
-        {
-            printf("cannot move card (%d,%d) onto foundation (%d, %d)\n", moving->suit, moving->value, onto->suit, onto->value);
-            return 0;
-        }
-        else if (!onto && moving->value != ACE)
-        {
-            printf("cannot move card (%d,%d) onto empty foundation\n", moving->suit, moving->value);
-            return 0;
-        }
-        break;
-    case MOVE_TO_TABLEU:
-        int tableu_len = ntlen(solitaire->tableu[move->to_x]);
-        if (tableu_len > 0)
-        {
-            onto = solitaire->tableu[move->to_x][tableu_len - 1];
-        }
-
-        if (onto && !follows_different_suit(*onto, *moving))
-        {
-            printf("cannot move card (%d,%d) onto tableu card (%d, %d)\n", moving->suit, moving->value, onto->suit, onto->value);
-            return 0;
-        }
-        else if (!onto && moving->value != KING)
-        {
-            printf("cannot move card (%d,%d) onto empty tableu column\n", moving->suit, moving->value);
-            return 0;
-        }
-        break;
-    }
-
-    return 1;
 }
 
 int solitaire_undo(Solitaire *solitaire)
@@ -351,14 +364,14 @@ int solitaire_undo(Solitaire *solitaire)
         }
         else
         {
-            // move data->cards_moved cards from stock into talon
+            // move data->cards_moved cards from talon into stock
             int talon_len = ntlen(solitaire->talon);
             int stock_len = ntlen(solitaire->stock);
             for (int i = 0; i < data->cards_moved; i++)
             {
                 int talon_index = talon_len - i - 1;
                 solitaire->stock[stock_len] = solitaire->talon[talon_index];
-                solitaire->stock[stock_len]->shown = 1;
+                solitaire->stock[stock_len]->shown = 0;
                 solitaire->talon[talon_index] = NULL;
                 stock_len++;
             }
@@ -379,17 +392,24 @@ int solitaire_undo(Solitaire *solitaire)
         switch (move->from)
         {
         case MOVE_FROM_FOUNDATION:
+        {
+
             int foundation_len = ntlen(solitaire->foundations[move->from_x]);
             from_cards = &solitaire->foundations[move->from_x][foundation_len];
             break;
+        }
         case MOVE_FROM_TABLEU:
+        {
             int tableu_len = ntlen(solitaire->tableu[move->from_x]);
             from_cards = &solitaire->tableu[move->from_x][tableu_len];
             break;
+        }
         case MOVE_FROM_TALON:
+        {
             int talon_len = ntlen(solitaire->talon);
             from_cards = &solitaire->talon[talon_len];
             break;
+        }
         }
 
         switch (move->to)
@@ -460,27 +480,39 @@ int solitaire_redo(Solitaire *solitaire)
         switch (move->from)
         {
         case MOVE_FROM_FOUNDATION:
+        {
             int foundation_len = ntlen(solitaire->foundations[move->from_x]);
             from_cards = &solitaire->foundations[move->from_x][foundation_len - 1];
             break;
+        }
         case MOVE_FROM_TABLEU:
+        {
+
             int tableu_len = ntlen(solitaire->tableu[move->from_x]);
             from_cards = &solitaire->tableu[move->from_x][tableu_len - data->cards_moved];
             break;
+        }
         case MOVE_FROM_TALON:
+        {
             int talon_len = ntlen(solitaire->talon);
             from_cards = &solitaire->talon[talon_len - 1];
             break;
+        }
         }
 
         switch (move->to)
         {
         case MOVE_TO_FOUNDATION:
+        {
             to_cards = solitaire->foundations[move->to_x];
             break;
+        }
         case MOVE_TO_TABLEU:
+        {
+
             to_cards = solitaire->tableu[move->to_x];
             break;
+        }
         }
 
         int to_cards_len = ntlen(to_cards);
@@ -510,4 +542,49 @@ int solitaire_can_undo(Solitaire *solitaire)
 int solitaire_can_redo(Solitaire *solitaire)
 {
     return solitaire->move_index < solitaire->move_end;
+}
+
+int solitaire_find_move(Solitaire *solitaire, MoveFrom from, int from_x, int from_y, Move *move)
+{
+    MoveData *data = malloc(sizeof(MoveData));
+    memset(data, 0, sizeof(MoveData));
+
+    move->type = MOVE_CARD;
+    move->from = from;
+    move->from_x = from_x;
+    move->from_y = from_y;
+
+    for (int i = 0; i < SUIT_MAX; i++)
+    {
+        move->to = MOVE_TO_FOUNDATION;
+        move->to_x = i;
+        if (!solitaire_make_move_data(solitaire, move, data))
+        {
+            continue;
+        }
+        if (solitaire_validate_move(solitaire, move, data))
+        {
+            free(data);
+            return 1;
+        }
+    }
+
+    for (int i = 0; i < 7; i++)
+    {
+        move->to = MOVE_TO_TABLEU;
+        move->to_x = i;
+        if (!solitaire_make_move_data(solitaire, move, data))
+        {
+            continue;
+        }
+        if (solitaire_validate_move(solitaire, move, data))
+        {
+            free(data);
+            return 1;
+        }
+    }
+
+    free(data);
+
+    return 0;
 }

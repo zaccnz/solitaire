@@ -19,7 +19,8 @@ add_executable(${PROJECT_NAME}
   src/scenes/menu.c 
   src/solitaire.c 
   src/main.c 
-  src/scene.c 
+  src/scene.c
+  src/util.c
   
   libs/tomlc99/toml.c
 )

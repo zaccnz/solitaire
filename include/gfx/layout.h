@@ -6,40 +6,34 @@
  */
 #pragma once
 
-typedef enum LAYOUTPOSITIONING
+typedef enum LAYOUTPOSITION
 {
     LAYOUT_NONE,
 
-    // menu
-    LAYOUT_HEADER,
-    LAYOUT_BUTTONS_CENTER,
-    LAYOUT_BUTTON_BOTTOM_LEFT,
-    LAYOUT_BUTTON_BOTTOM_CENTER,
-    LAYOUT_BUTTON_BOTTOM_RIGHT,
-
     // game
     LAYOUT_SCORE,
-    LAYOUT_FOUNDATION,
-    LAYOUT_TABLEU,
-    LAYOUT_TALON,
+    LAYOUT_FOUNDATION, // data: int (foundation index)
+    LAYOUT_TABLEU,     // data: int (tableu coordinate)
+    LAYOUT_TALON,      // data: int (card index)
     LAYOUT_STOCK,
 
     LAYOUT_MAX,
-} LayoutPositioning;
-
-typedef enum LAYOUTSIZING
-{
-} LayoutSizing;
-
-typedef struct LayoutPos
-{
-    void *null;
-} LayoutPos;
+} LayoutPosition;
 
 typedef struct CalcOut
 {
-    void *null;
+    int x;
+    int y;
+    int width;
+    int height;
 } CalcOut;
 
-void layout_cardsize();
-void layout_calculate(LayoutPos pos, int width, int height, CalcOut *out);
+typedef struct Coordinate
+{
+    int x;
+    int y;
+} Coordinate;
+
+void layout_resize(int width, int height);
+void layout_cardsize(int *width, int *height);
+void layout_calculate(LayoutPosition pos, void *data, CalcOut *out);

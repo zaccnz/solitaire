@@ -1,116 +1,42 @@
 #include "gfx/animated.h"
+#include "gfx/cards.h"
 #include "scene.h"
 #include "solitaire.h"
 #include "scenes/menu.h"
+#include "util.h"
 
 #include <raylib.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include <rlgl.h>
 
 #define RAYLIB_NUKLEAR_IMPLEMENTATION
 #include <raylib-nuklear.h>
 
-// todo: replace with TOML
-
-#define CARD_WIDTH 88
-#define CARD_HEIGHT 124
-#define CARD_COLUMNS 5
-
-typedef struct DragAndDrop
-{
-    MoveFrom from;
-    Card *cards[VALUE_MAX];
-    int x;
-    int tableu_y;
-} DragAndDrop;
-
-Texture2D *get_card_texture(Card *card, Rectangle *frame, Texture2D *back, Texture2D *clubs, Texture2D *hearts, Texture2D *spades, Texture2D *diamonds)
-{
-    frame->width = CARD_WIDTH;
-    frame->height = CARD_HEIGHT;
-
-    Texture2D *texture = NULL;
-    if (card->shown)
-    {
-        switch (card->suit)
-        {
-        case CLUBS:
-            texture = clubs;
-            break;
-        case HEARTS:
-            texture = hearts;
-            break;
-        case SPADES:
-            texture = spades;
-            break;
-        case DIAMONDS:
-            texture = diamonds;
-            break;
-        }
-
-        int x = card->value % CARD_COLUMNS;
-        int y = card->value / CARD_COLUMNS;
-
-        frame->x = x * CARD_WIDTH;
-        frame->y = y * CARD_HEIGHT;
-    }
-    else
-    {
-        frame->x = 0;
-        frame->y = 0;
-        texture = back;
-    }
-
-    return texture;
-}
-
-float rotation = 0.0;
-
-int animation_update_test(float progress, void *data)
-{
-    rotation = progress;
-    printf("animation progress: %.02f\n", progress);
-}
-
 int main(void)
 {
-    Solitaire solitaire = solitaire_create((SolitaireConfig){
-        .seed = 0,
-        .deal_three = 1,
-    });
-    DragAndDrop *dnd = NULL;
-
-    // check for existing settings
-
+    // load settings.toml
     // scene_push(&MenuScene);
-
-    int tableu_masks[7] = {-1, -1, -1, -1, -1, -1, -1};
-    int foundation_masks[4] = {-1, -1, -1, -1};
-    int waste_mask = -1;
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(800, 600, "solitaire");
 
-    Texture2D back = LoadTexture("res/SBS_2dPokerPack/Top-Down/Cards/Back - Top Down 88x124.png");
-    Texture2D clubs = LoadTexture("res/SBS_2dPokerPack/Top-Down/Cards/Clubs - Top Down 88x124.png");
-    Texture2D hearts = LoadTexture("res/SBS_2dPokerPack/Top-Down/Cards/Hearts - Top Down 88x124.png");
-    Texture2D spades = LoadTexture("res/SBS_2dPokerPack/Top-Down/Cards/Spades - Top Down 88x124.png");
-    Texture2D diamonds = LoadTexture("res/SBS_2dPokerPack/Top-Down/Cards/Diamonds - Top Down 88x124.png");
-
-    Rectangle frame = {
-        0.0f,
-        0.0f,
-        (float)CARD_WIDTH,
-        (float)CARD_HEIGHT,
-    };
-
     struct nk_context *ctx = InitNuklear(10);
+
+    Solitaire solitaire = solitaire_create((SolitaireConfig){
+        .seed = 0,
+        .deal_three = 1,
+    });
+
+    cards_init();
+    cards_animate_deal(&solitaire);
 
     while (!WindowShouldClose())
     {
         anim_update();
+        cards_update(&solitaire);
 
         if (IsKeyPressed(KEY_R))
         {
@@ -118,16 +44,7 @@ int main(void)
                 .seed = 0,
                 .deal_three = 1,
             });
-
-            for (int i = 0; i < 7; i++)
-            {
-                tableu_masks[i] = -1;
-            }
-            for (int i = 0; i < 4; i++)
-            {
-                foundation_masks[i] = -1;
-            }
-            waste_mask = -1;
+            cards_animate_deal(&solitaire);
         }
 
         if (IsKeyPressed(KEY_Z))
@@ -138,17 +55,8 @@ int main(void)
         {
             solitaire_redo(&solitaire);
         }
-        if (IsKeyPressed(KEY_A))
-        {
-            printf("creating animation\n");
-            AnimationConfig config = {
-                .on_update = animation_update_test,
-                .duration = 3.0f,
-            };
-            anim_create(config, NULL);
-        }
 
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+        /* if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
         {
             Vector2 pos = GetMousePosition();
             Rectangle stock = {
@@ -401,7 +309,7 @@ int main(void)
             }
             free(dnd);
             dnd = NULL;
-        }
+        } */
 
         UpdateNuklear(ctx);
 
@@ -418,104 +326,105 @@ int main(void)
         // scene_update(0.0);
         BeginDrawing();
         ClearBackground(RAYWHITE);
-
-        for (int i = 0; i < SUIT_MAX; i++)
-        {
-            Vector2 position = {800 / 2 - (float)(CARD_WIDTH * 3.5) + i * CARD_WIDTH, 10};
-
-            int foundation_len = ntlen(solitaire.foundations[i]);
-            if (foundation_masks[i] >= 0)
-            {
-                foundation_len -= foundation_masks[i];
-            }
-            if (foundation_len == 0)
-            {
-                DrawText("foundation", position.x, position.y, 10, GRAY);
-            }
-            else
-            {
-                Card *card = solitaire.foundations[i][foundation_len - 1];
-                Texture2D *texture = get_card_texture(card, &frame, &back, &clubs, &hearts, &spades, &diamonds);
-                DrawTextureRec(*texture, frame, position, WHITE);
-            }
-        }
-
-        int talon_len = ntlen(solitaire.talon);
-        for (int i = 3; i > 0; i--)
-        {
-            if (waste_mask == i)
-                continue;
-            int index = talon_len - i;
-            if (index >= 0)
-            {
-                Card *card = solitaire.talon[index];
-
-                Vector2 position = {800 / 2 + (float)(CARD_WIDTH * 2) - (i * (float)CARD_WIDTH * 0.5), 10};
-                Texture2D *texture = get_card_texture(card, &frame, &back, &clubs, &hearts, &spades, &diamonds);
-                DrawTextureRec(*texture, frame, position, WHITE);
-            }
-        }
-
-        int stock_len = ntlen(solitaire.stock);
-        if (stock_len > 0)
-        {
-            Card card = {
-                .suit = 0,
-                .value = 0,
-                .shown = 0,
-            };
-
-            Vector2 position = {800 / 2 + (float)(CARD_WIDTH * 3.5) - CARD_WIDTH, 10};
-            Vector2 zero = {-CARD_WIDTH / 2, -CARD_HEIGHT / 2};
-            Texture2D *texture = get_card_texture(&card, &frame, &back, &clubs, &hearts, &spades, &diamonds);
-
-            rlPushMatrix();
-            printf("rotation: %f\n", 360.0 * rotation);
-            rlTranslatef(800 / 2 + (float)(CARD_WIDTH * 3.0), 10.0 + (float)CARD_HEIGHT * 0.5, 0.0);
-            rlRotatef(360.0 * rotation, 0.0, 1.0, 0.0);
-            DrawTextureRec(*texture, frame, zero, WHITE);
-            rlPopMatrix();
-        }
-
-        for (int i = 0; i < 7; i++)
-        {
-            for (int j = 0; solitaire.tableu[i][j] != NULL; j++)
-            {
-                if (tableu_masks[i] != -1 && j >= tableu_masks[i])
+        /*
+                for (int i = 0; i < SUIT_MAX; i++)
                 {
-                    break;
+                    Vector2 position = {800 / 2 - (float)(CARD_WIDTH * 3.5) + i * CARD_WIDTH, 10};
+
+                    int foundation_len = ntlen(solitaire.foundations[i]);
+                    if (foundation_masks[i] >= 0)
+                    {
+                        foundation_len -= foundation_masks[i];
+                    }
+                    if (foundation_len == 0)
+                    {
+                        DrawText("foundation", position.x, position.y, 10, GRAY);
+                    }
+                    else
+                    {
+                        Card *card = solitaire.foundations[i][foundation_len - 1];
+                        Texture2D *texture = get_card_texture(card, &frame, &back, &clubs, &hearts, &spades, &diamonds);
+                        DrawTextureRec(*texture, frame, position, WHITE);
+                    }
                 }
 
-                Vector2 position = {800 / 2 - (float)(CARD_WIDTH * 3.5), 450 / 2 - (float)(CARD_HEIGHT * 1.5) + 100};
+                int talon_len = ntlen(solitaire.talon);
+                for (int i = 3; i > 0; i--)
+                {
+                    if (waste_mask == i)
+                        continue;
+                    int index = talon_len - i;
+                    if (index >= 0)
+                    {
+                        Card *card = solitaire.talon[index];
 
-                position.x += i * CARD_WIDTH;
-                position.y += j * (float)CARD_HEIGHT * 0.25f;
+                        Vector2 position = {800 / 2 + (float)(CARD_WIDTH * 2) - (i * (float)CARD_WIDTH * 0.5), 10};
+                        Texture2D *texture = get_card_texture(card, &frame, &back, &clubs, &hearts, &spades, &diamonds);
+                        DrawTextureRec(*texture, frame, position, WHITE);
+                    }
+                }
 
-                Card *card = solitaire.tableu[i][j];
-                Texture2D *texture = get_card_texture(card, &frame, &back, &clubs, &hearts, &spades, &diamonds);
-                DrawTextureRec(*texture, frame, position, WHITE);
-            }
-        }
+                int stock_len = ntlen(solitaire.stock);
+                if (stock_len > 0)
+                {
+                    Card card = {
+                        .suit = 0,
+                        .value = 0,
+                        .shown = 0,
+                    };
 
-        // draw held cards
-        // scene_render();
+                    Vector2 position = {800 / 2 + (float)(CARD_WIDTH * 3.5) - CARD_WIDTH, 10};
+                    Vector2 zero = {-CARD_WIDTH / 2, -CARD_HEIGHT / 2};
+                    Texture2D *texture = get_card_texture(&card, &frame, &back, &clubs, &hearts, &spades, &diamonds);
 
-        if (dnd)
-        {
-            Vector2 pos = GetMousePosition();
-            pos.x -= CARD_WIDTH / 2;
-            pos.y -= CARD_HEIGHT / 2;
-            for (int i = 0; dnd->cards[i] != NULL; i++)
-            {
-                pos.y += (float)CARD_HEIGHT * 0.25f;
+                    rlPushMatrix();
+                    rlTranslatef(800 / 2 + (float)(CARD_WIDTH * 3.0), 10.0 + (float)CARD_HEIGHT * 0.5, 0.0);
+                    rlRotatef(360.0 * rotation, 0.0, 1.0, 0.0);
+                    DrawTextureRec(*texture, frame, zero, WHITE);
+                    rlPopMatrix();
+                }
 
-                Card *card = dnd->cards[i];
-                Texture2D *texture = get_card_texture(card, &frame, &back, &clubs, &hearts, &spades, &diamonds);
-                DrawTextureRec(*texture, frame, pos, WHITE);
-            }
-        }
+                for (int i = 0; i < 7; i++)
+                {
+                    for (int j = 0; solitaire.tableu[i][j] != NULL; j++)
+                    {
+                        if (tableu_masks[i] != -1 && j >= tableu_masks[i])
+                        {
+                            break;
+                        }
+
+                        Vector2 position = {800 / 2 - (float)(CARD_WIDTH * 3.5), 450 / 2 - (float)(CARD_HEIGHT * 1.5) + 100};
+
+                        position.x += i * CARD_WIDTH;
+                        position.y += j * (float)CARD_HEIGHT * 0.25f;
+
+                        Card *card = solitaire.tableu[i][j];
+                        Texture2D *texture = get_card_texture(card, &frame, &back, &clubs, &hearts, &spades, &diamonds);
+                        DrawTextureRec(*texture, frame, position, WHITE);
+                    }
+                }
+
+                // draw held cards
+                // scene_render();
+
+                if (dnd)
+                {
+                    Vector2 pos = GetMousePosition();
+                    pos.x -= CARD_WIDTH / 2;
+                    pos.y -= CARD_HEIGHT / 2;
+                    for (int i = 0; dnd->cards[i] != NULL; i++)
+                    {
+                        pos.y += (float)CARD_HEIGHT * 0.25f;
+
+                        Card *card = dnd->cards[i];
+                        Texture2D *texture = get_card_texture(card, &frame, &back, &clubs, &hearts, &spades, &diamonds);
+                        DrawTextureRec(*texture, frame, pos, WHITE);
+                    }
+                } */
 
         // DrawText("this IS a texture!", 360, 370, 10, GRAY);
+
+        cards_render(&solitaire);
 
         if (solitaire_is_complete(&solitaire))
         {
@@ -530,13 +439,9 @@ int main(void)
     }
 
     anim_release();
+    cards_free();
 
     // scene_pop();
-    UnloadTexture(clubs);
-    UnloadTexture(hearts);
-    UnloadTexture(spades);
-    UnloadTexture(diamonds);
-    UnloadTexture(back);
     UnloadNuklear(ctx);
 
     CloseWindow();
