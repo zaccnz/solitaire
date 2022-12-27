@@ -175,6 +175,15 @@ void cards_init()
 
 void cards_free()
 {
+    for (int i = 0; i < SUIT_MAX * VALUE_MAX; i++)
+    {
+        CardSprite *sprite = cards + i;
+        if (sprite->animPtr.index >= 0)
+        {
+            anim_cancel(sprite->animPtr);
+        }
+    }
+
     // todo: move into texture thingy
     UnloadTexture(clubs);
     UnloadTexture(hearts);
@@ -251,7 +260,7 @@ int card_check_hit(Vector2 pos, SpriteFlags flags_mask)
     return -1;
 }
 
-void cards_update_sprites(Solitaire *solitaire)
+void cards_position_sprites(Solitaire *solitaire)
 {
     for (int i = 0; i < SUIT_MAX; i++)
     {
@@ -305,11 +314,216 @@ void cards_update_sprites(Solitaire *solitaire)
     }
 }
 
+void cards_on_click(Solitaire *solitaire, CardSprite *target)
+{
+    printf("up - was clicked\n");
+    CalcOut out;
+    layout_calculate(LAYOUT_STOCK, NULL, &out);
+    Rectangle stock_bounds = {
+        .x = out.x,
+        .y = out.y,
+        .width = out.width,
+        .height = out.height,
+    };
+
+    // move cards we hit
+    if ((target && target->flags & FLAGS_STOCK) || CheckCollisionPointRec(GetMousePosition(), stock_bounds))
+    {
+        // deal cards
+        Move move = {
+            .type = MOVE_CYCLE_STOCK,
+            .from = MOVE_FROM_NONE,
+            .to = MOVE_TO_NONE,
+            .from_x = -1,
+            .from_y = -1,
+            .to_x = -1,
+        };
+        solitaire_make_move(solitaire, move);
+        return;
+    }
+    else if (target)
+    {
+        Move move = {0};
+        MoveFrom from;
+        int from_x = -1;
+        int from_y = -1;
+        if (target->flags & FLAGS_FOUNDATION)
+        {
+            from = MOVE_FROM_FOUNDATION;
+            from_x = target->pile;
+        }
+        else if (target->flags & FLAGS_TABLEU)
+        {
+            from = MOVE_FROM_TABLEU;
+            from_x = target->pile;
+            from_y = target->index;
+        }
+        else if (target->flags & FLAGS_TALON)
+        {
+            from = MOVE_FROM_TALON;
+        }
+        if (solitaire_find_move(solitaire, from, from_x, from_y, &move))
+        {
+            solitaire_make_move(solitaire, move);
+        }
+    }
+}
+
+void cards_on_drag(Solitaire *solitaire, CardSprite *target)
+{
+    if (target == NULL)
+    {
+        return;
+    }
+
+    dnd = malloc(sizeof(DragAndDrop));
+    memset(dnd, 0, sizeof(DragAndDrop));
+
+    if (target->flags & FLAGS_FOUNDATION)
+    {
+        dnd->from = MOVE_FROM_FOUNDATION;
+        dnd->from_idx = target->pile;
+        dnd->count = 1;
+        dnd->cards[0] = target;
+    }
+    else if (target->flags & FLAGS_TABLEU)
+    {
+        dnd->from = MOVE_FROM_TABLEU;
+        dnd->from_idx = target->pile;
+        int tableu_len = ntlen((void **)solitaire->tableu[target->pile]);
+        dnd->count = tableu_len - target->index;
+        int idx = 0;
+        for (int i = target->index; i < tableu_len; i++)
+        {
+            Card *card = solitaire->tableu[target->pile][i];
+            dnd->cards[idx++] = &cards[card_to_index(card)];
+        }
+    }
+    else if (target->flags & FLAGS_TALON)
+    {
+        dnd->from = MOVE_FROM_TALON;
+        dnd->from_idx = -1;
+        dnd->count = 1;
+        dnd->cards[0] = target;
+    }
+    else
+    {
+        free(dnd);
+        dnd = NULL;
+    }
+}
+
+void cards_on_drop(Solitaire *solitaire, CardSprite *target)
+{
+    if (!dnd)
+    {
+        return;
+    }
+
+    printf("up - was dragging\n");
+    int from_y = -1;
+    if (dnd->from == MOVE_FROM_TABLEU)
+    {
+        int tableu_from_len = ntlen((void **)solitaire->tableu[dnd->from_idx]);
+        from_y = tableu_from_len - dnd->count;
+    }
+
+    if (target)
+    {
+        MoveTo to = MOVE_TO_NONE;
+
+        if (target->flags & FLAGS_FOUNDATION)
+        {
+            to = MOVE_TO_FOUNDATION;
+        }
+        else if (target->flags & FLAGS_TABLEU)
+        {
+            to = MOVE_TO_TABLEU;
+        }
+
+        // make move
+        Move move = {
+            .type = MOVE_CARD,
+            .from = dnd->from,
+            .to = to,
+            .from_x = dnd->from_idx,
+            .from_y = from_y,
+            .to_x = target->pile,
+        };
+        solitaire_make_move(solitaire, move);
+    }
+    else
+    {
+        Vector2 pos = GetMousePosition();
+        int collision = 0;
+        MoveTo to;
+        int to_x;
+        for (int i = 0; i < SUIT_MAX; i++)
+        {
+            CalcOut out;
+            layout_calculate(LAYOUT_FOUNDATION, &i, &out);
+            Rectangle foundation_bounds = {
+                .x = out.x,
+                .y = out.y,
+                .width = out.width,
+                .height = out.height,
+            };
+
+            if (CheckCollisionPointRec(pos, foundation_bounds))
+            {
+                collision = 1;
+                to = MOVE_TO_FOUNDATION;
+                to_x = i;
+                break;
+            }
+        }
+
+        for (int i = 0; i < 7; i++)
+        {
+            if (ntlen((void **)solitaire->tableu[i]) > 0)
+            {
+                continue;
+            }
+            CalcOut out;
+            Coordinate coord = {
+                .x = i,
+                .y = 0,
+            };
+            layout_calculate(LAYOUT_TABLEU, &coord, &out);
+            Rectangle tableu_bounds = {
+                .x = out.x,
+                .y = out.y,
+                .width = out.width,
+                .height = out.height,
+            };
+
+            if (CheckCollisionPointRec(pos, tableu_bounds))
+            {
+                collision = 1;
+                to = MOVE_TO_TABLEU;
+                to_x = i;
+            }
+        }
+
+        if (collision)
+        {
+            Move move = {
+                .type = MOVE_CARD,
+                .from = dnd->from,
+                .to = to,
+                .from_x = dnd->from_idx,
+                .from_y = from_y,
+                .to_x = to_x,
+            };
+            solitaire_make_move(solitaire, move);
+        }
+    }
+}
+
 void cards_update(Solitaire *solitaire)
 {
-    cards_update_sprites(solitaire);
+    cards_position_sprites(solitaire);
 
-    // click, drag and drop
     int down = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
     int released = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
 
@@ -317,8 +531,7 @@ void cards_update(Solitaire *solitaire)
     {
         held = 0;
     }
-
-    if (down)
+    else if (down)
     {
         held += GetFrameTime();
     }
@@ -350,217 +563,25 @@ void cards_update(Solitaire *solitaire)
     }
 
     int hit = card_check_hit(pos, mask);
+    CardSprite *target = NULL;
+    if (hit >= 0)
+    {
+        target = &cards[hit];
+    }
 
     if (down)
     {
-        printf("down\n");
-
-        if (hit == -1)
-        {
-            return;
-        }
-
-        dnd = malloc(sizeof(DragAndDrop));
-        memset(dnd, 0, sizeof(DragAndDrop));
-
-        CardSprite *hit_sprite = &cards[hit];
-        if (hit_sprite->flags & FLAGS_FOUNDATION)
-        {
-            dnd->from = MOVE_FROM_FOUNDATION;
-            dnd->from_idx = hit_sprite->pile;
-            dnd->count = 1;
-            dnd->cards[0] = hit_sprite;
-        }
-        else if (hit_sprite->flags & FLAGS_TABLEU)
-        {
-            dnd->from = MOVE_FROM_TABLEU;
-            dnd->from_idx = hit_sprite->pile;
-            int tableu_len = ntlen((void **)solitaire->tableu[hit_sprite->pile]);
-            dnd->count = tableu_len - hit_sprite->index;
-            int idx = 0;
-            for (int i = hit_sprite->index; i < tableu_len; i++)
-            {
-                Card *card = solitaire->tableu[hit_sprite->pile][i];
-                dnd->cards[idx++] = &cards[card_to_index(card)];
-            }
-        }
-        else if (hit_sprite->flags & FLAGS_TALON)
-        {
-            dnd->from = MOVE_FROM_TALON;
-            dnd->from_idx = -1;
-            dnd->count = 1;
-            dnd->cards[0] = hit_sprite;
-        }
-        else
-        {
-            free(dnd);
-            dnd = NULL;
-        }
+        cards_on_drag(solitaire, target);
     }
     else if (released)
     {
         if (held < CLICK_TIME)
         {
-            printf("up - was clicked\n");
-            CalcOut out;
-            layout_calculate(LAYOUT_STOCK, NULL, &out);
-            Rectangle stock_bounds = {
-                .x = out.x,
-                .y = out.y,
-                .width = out.width,
-                .height = out.height,
-            };
-
-            // move cards we hit
-            if ((hit >= 0 && cards[hit].flags & FLAGS_STOCK) || CheckCollisionPointRec(pos, stock_bounds))
-            {
-                // deal cards
-                Move move = {
-                    .type = MOVE_CYCLE_STOCK,
-                    .from = MOVE_FROM_NONE,
-                    .to = MOVE_TO_NONE,
-                    .from_x = -1,
-                    .from_y = -1,
-                    .to_x = -1,
-                };
-                solitaire_make_move(solitaire, move);
-                return;
-            }
-            else if (hit >= 0)
-            {
-                Move move = {0};
-                MoveFrom from;
-                int from_x = -1;
-                int from_y = -1;
-                CardSprite *hit_sprite = &cards[hit];
-                if (hit_sprite->flags & FLAGS_FOUNDATION)
-                {
-                    from = MOVE_FROM_FOUNDATION;
-                    from_x = hit_sprite->pile;
-                }
-                else if (hit_sprite->flags & FLAGS_TABLEU)
-                {
-                    from = MOVE_FROM_TABLEU;
-                    from_x = hit_sprite->pile;
-                    from_y = hit_sprite->index;
-                }
-                else if (hit_sprite->flags & FLAGS_TALON)
-                {
-                    from = MOVE_FROM_TALON;
-                }
-                if (solitaire_find_move(solitaire, from, from_x, from_y, &move))
-                {
-                    solitaire_make_move(solitaire, move);
-                }
-            }
+            cards_on_click(solitaire, target);
         }
         else
         {
-            if (!dnd)
-            {
-                return;
-            }
-
-            printf("up - was dragging\n");
-            int from_y = -1;
-            if (dnd->from == MOVE_FROM_TABLEU)
-            {
-                int tableu_from_len = ntlen((void **)solitaire->tableu[dnd->from_idx]);
-                from_y = tableu_from_len - dnd->count;
-            }
-
-            if (hit >= 0)
-            {
-                CardSprite *hit_sprite = &cards[hit];
-                MoveTo to = MOVE_TO_NONE;
-
-                if (hit_sprite->flags & FLAGS_FOUNDATION)
-                {
-                    to = MOVE_TO_FOUNDATION;
-                }
-                else if (hit_sprite->flags & FLAGS_TABLEU)
-                {
-                    to = MOVE_TO_TABLEU;
-                }
-
-                // make move
-                Move move = {
-                    .type = MOVE_CARD,
-                    .from = dnd->from,
-                    .to = to,
-                    .from_x = dnd->from_idx,
-                    .from_y = from_y,
-                    .to_x = hit_sprite->pile,
-                };
-                solitaire_make_move(solitaire, move);
-            }
-            else
-            {
-                for (int i = 0; i < SUIT_MAX; i++)
-                {
-                    CalcOut out;
-                    layout_calculate(LAYOUT_FOUNDATION, &i, &out);
-                    Rectangle foundation_bounds = {
-                        .x = out.x,
-                        .y = out.y,
-                        .width = out.width,
-                        .height = out.height,
-                    };
-
-                    printf("checking collision with foundation %d\n", i);
-
-                    if (CheckCollisionPointRec(pos, foundation_bounds))
-                    {
-                        // make move
-                        Move move = {
-                            .type = MOVE_CARD,
-                            .from = dnd->from,
-                            .to = MOVE_TO_FOUNDATION,
-                            .from_x = dnd->from_idx,
-                            .from_y = from_y,
-                            .to_x = i,
-                        };
-                        solitaire_make_move(solitaire, move);
-                        break;
-                    }
-                }
-
-                for (int i = 0; i < 7; i++)
-                {
-                    if (ntlen((void **)solitaire->tableu[i]) > 0)
-                    {
-                        continue;
-                    }
-                    CalcOut out;
-                    Coordinate coord = {
-                        .x = i,
-                        .y = 0,
-                    };
-                    layout_calculate(LAYOUT_TABLEU, &coord, &out);
-                    Rectangle tableu_bounds = {
-                        .x = out.x,
-                        .y = out.y,
-                        .width = out.width,
-                        .height = out.height,
-                    };
-
-                    printf("checking collision with tableu %d\n", i);
-
-                    if (CheckCollisionPointRec(pos, tableu_bounds))
-                    {
-                        // make move
-                        Move move = {
-                            .type = MOVE_CARD,
-                            .from = dnd->from,
-                            .to = MOVE_TO_TABLEU,
-                            .from_x = dnd->from_idx,
-                            .from_y = from_y,
-                            .to_x = i,
-                        };
-                        solitaire_make_move(solitaire, move);
-                    }
-                }
-            }
+            cards_on_drop(solitaire, target);
         }
         if (dnd)
         {
@@ -610,7 +631,7 @@ void cards_render(Solitaire *solitaire)
     for (int i = 0; i < SUIT_MAX; i++)
     {
         int foundation_len = ntlen((void **)solitaire->foundations[i]);
-        if (dnd && dnd->from == MOVE_FROM_FOUNDATION)
+        if (dnd && dnd->from == MOVE_FROM_FOUNDATION && dnd->from_idx == i)
         {
             foundation_len -= dnd->count;
         }
@@ -732,10 +753,11 @@ float card_anim_calc_duration(CardAnimationData *data)
 
 void cards_animate_deal(Solitaire *solitaire)
 {
+    cards_position_sprites(solitaire);
     // play deal animation (call on game created)
 }
 
-void cards_animate_move(CardsMove move)
+void cards_animate_move(Move move, int undo)
 {
     // move a card from a position to a position
     // this should be called from the solitaire.c file

@@ -114,6 +114,7 @@ int solitaire_redo(Solitaire *solitaire);
 
 // more difficult
 int solitaire_find_move(Solitaire *solitaire, MoveFrom from, int from_x, int from_y, Move *move);
-int solitaire_make_trivial_move(Solitaire *solitaire);
+int solitaire_can_auto_complete(Solitaire *solitaire);
+int solitaire_auto_complete_move(Solitaire *solitaire);
 int solitaire_is_solvable(Solitaire *solitaire);
 int solitaire_is_trivial(Solitaire *solitaire);

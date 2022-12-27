@@ -41,9 +41,18 @@ void shuffle_cards(Card deck[MAX_CARDS])
 
 Solitaire solitaire_create(SolitaireConfig config)
 {
+    if (config.seed == 0)
+    {
+        config.seed = (int)time(NULL);
+    }
+
+    printf("config.seed = %d\n", config.seed);
+
     Solitaire game = {
         .config = config,
     };
+
+    srand(config.seed);
 
     const int DECK_SIZE = sizeof(Card) * MAX_CARDS;
     Card *deck = malloc(DECK_SIZE);
@@ -59,13 +68,6 @@ Solitaire solitaire_create(SolitaireConfig config)
             card->shown = 0;
         }
     }
-
-    if (config.seed == 0)
-    {
-        config.seed = (int)time(NULL);
-    }
-
-    srand(config.seed);
 
     shuffle_cards(deck);
 
@@ -587,4 +589,117 @@ int solitaire_find_move(Solitaire *solitaire, MoveFrom from, int from_x, int fro
     free(data);
 
     return 0;
+}
+
+int solitaire_can_auto_complete(Solitaire *solitaire)
+{
+    if (ntlen(solitaire->stock) > 0 || ntlen(solitaire->talon) > 1)
+    {
+        return 0;
+    }
+
+    for (int i = 0; i < 7; i++)
+    {
+        int tableu_len = ntlen(solitaire->tableu[i]);
+        for (int j = 0; j < tableu_len; j++)
+        {
+            if (!solitaire->tableu[i][j]->shown)
+            {
+                return 0;
+            }
+        }
+    }
+
+    return 1;
+}
+
+// finds a card in the talon or tableu
+// pass suit = SUIT_MAX to look for any suit
+int solitaire_find_card_for_complete(Solitaire *solitaire, Suit suit, Value value,
+                                     MoveFrom *from, int *from_x, int *from_y)
+{
+    // check tableu
+    for (int i = 0; i < 7; i++)
+    {
+        int tableu_len = ntlen(solitaire->tableu[i]);
+        if (tableu_len == 0)
+            continue;
+        Card *card = solitaire->tableu[i][tableu_len - 1];
+        if ((suit == SUIT_MAX || card->suit == suit) && card->value == value)
+        {
+            *from = MOVE_FROM_TABLEU;
+            *from_x = i;
+            *from_y = tableu_len - 1;
+            return 1;
+        }
+    }
+
+    // check talon
+    int talon_len = ntlen(solitaire->talon);
+    if (talon_len > 0)
+    {
+        Card *card = solitaire->talon[talon_len - 1];
+        if ((suit == SUIT_MAX || card->suit == suit) && card->value == value)
+        {
+            *from = MOVE_FROM_TALON;
+            *from_x = -1;
+            *from_y = -1;
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+int solitaire_auto_complete_move(Solitaire *solitaire)
+{
+    // find the pile we want to move onto
+    int lowest_foundation = -1;
+    Value lowest_foundation_value = VALUE_MAX;
+    Suit lowest_foundation_suit = SUIT_MAX;
+
+    for (int i = 0; i < SUIT_MAX; i++)
+    {
+        int foundation_len = ntlen(solitaire->foundations[i]);
+        if (foundation_len == 0)
+        {
+            lowest_foundation = i;
+            lowest_foundation_value = ACE;
+            break;
+        }
+        else
+        {
+            Card *top = solitaire->foundations[i][foundation_len - 1];
+            if (top->value + 1 < lowest_foundation_value)
+            {
+                lowest_foundation = i;
+                lowest_foundation_suit = top->suit;
+                lowest_foundation_value = top->value + 1;
+            }
+        }
+    }
+
+    // find a suitable card
+    MoveFrom from;
+    int from_x;
+    int from_y;
+
+    if (!solitaire_find_card_for_complete(solitaire, lowest_foundation_suit, lowest_foundation_value, &from, &from_x, &from_y))
+    {
+        printf("auto complete failed to find card %d,%d\n", lowest_foundation_suit, lowest_foundation_value);
+        return 0;
+    }
+
+    // make the move
+    Move move = {
+        .type = MOVE_CARD,
+        .from = from,
+        .from_x = from_x,
+        .from_y = from_y,
+        .to = MOVE_TO_FOUNDATION,
+        .to_x = lowest_foundation,
+    };
+
+    solitaire_make_move(solitaire, move);
+    return 1;
 }
