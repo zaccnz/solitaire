@@ -85,6 +85,18 @@ int anim_cancel(AnimationPointer animation)
     anim_clear(i, 0);
 }
 
+void anim_clear_all()
+{
+    for (int i = 0; i < ANIMATION_MAX; i++)
+    {
+        if (!animations[i])
+        {
+            continue;
+        }
+        anim_clear(i, 0);
+    }
+}
+
 void anim_update()
 {
     Animation *animation = NULL;
@@ -98,7 +110,7 @@ void anim_update()
 
         animation = animations[i];
         animation->elapsed += delta;
-        int looping = animation->config.duration == 0.0;
+        int looping = (animation->config.duration - 0.0f < 0.0001);
         int result;
         if (animation->config.on_update)
         {

@@ -51,6 +51,7 @@ int main(void)
 
         if (IsKeyPressed(KEY_R))
         {
+            anim_clear_all();
             solitaire = solitaire_create((SolitaireConfig){
                 .seed = 0,
                 .deal_three = 1,

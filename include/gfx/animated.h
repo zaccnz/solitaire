@@ -29,6 +29,8 @@ typedef struct AnimationPointer
 int anim_create(AnimationConfig config, AnimationPointer *ptr);
 int anim_cancel(AnimationPointer animation);
 
+void anim_clear_all();
+
 void anim_update();
 void anim_release();
 

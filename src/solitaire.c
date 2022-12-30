@@ -1,5 +1,6 @@
 #include "solitaire.h"
 
+#include "gfx/cards.h"
 #include "util.h"
 
 #include <stdlib.h>
@@ -242,7 +243,7 @@ int solitaire_validate_move(Solitaire *solitaire, Move *move, MoveData *data)
 }
 
 int solitaire_make_move_data(Solitaire *solitaire, Move *move, MoveData *data)
-{ // figure out what 'data' we should set
+{
     switch (move->type)
     {
     case MOVE_CYCLE_STOCK:
@@ -351,6 +352,8 @@ int solitaire_undo(Solitaire *solitaire)
     Move *move = solitaire->moves[solitaire->move_index - 1];
     MoveData *data = solitaire->moves_data[solitaire->move_index - 1];
 
+    cards_animate_move(solitaire, *move, *data, 1);
+
     if (move->type == MOVE_CYCLE_STOCK)
     {
         if (data->return_to_stock)
@@ -389,6 +392,8 @@ int solitaire_undo(Solitaire *solitaire)
             int tableu_len = ntlen(solitaire->tableu[move->from_x]);
             solitaire->tableu[move->from_x][tableu_len - 1]->shown = 0;
             printf("hid card x=%d,y=%d\n", move->from_x, tableu_len - 1);
+
+            cards_animate_reveal(solitaire, move->from_x, tableu_len - 1);
         }
 
         switch (move->from)
@@ -445,6 +450,8 @@ int solitaire_redo(Solitaire *solitaire)
 
     Move *move = solitaire->moves[solitaire->move_index];
     MoveData *data = solitaire->moves_data[solitaire->move_index];
+
+    cards_animate_move(solitaire, *move, *data, 0);
 
     if (move->type == MOVE_CYCLE_STOCK)
     {
@@ -530,6 +537,8 @@ int solitaire_redo(Solitaire *solitaire)
             int tableu_len = ntlen(solitaire->tableu[move->from_x]);
             solitaire->tableu[move->from_x][tableu_len - 1]->shown = 1;
             printf("revealed card x=%d,y=%d\n", move->from_x, tableu_len - 1);
+
+            cards_animate_reveal(solitaire, move->from_x, tableu_len - 1);
         }
     }
 
@@ -664,6 +673,7 @@ int solitaire_auto_complete_move(Solitaire *solitaire)
         if (foundation_len == 0)
         {
             lowest_foundation = i;
+            lowest_foundation_suit = SUIT_MAX;
             lowest_foundation_value = ACE;
             break;
         }
