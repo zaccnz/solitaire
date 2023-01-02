@@ -1,6 +1,7 @@
 #include "solitaire.h"
 
 #include "gfx/cards.h"
+#include "sfx/audio.h"
 #include "util.h"
 
 #include <stdlib.h>
@@ -352,7 +353,21 @@ int solitaire_undo(Solitaire *solitaire)
     Move *move = solitaire->moves[solitaire->move_index - 1];
     MoveData *data = solitaire->moves_data[solitaire->move_index - 1];
 
+    // DEPENDENCIES BEGIN
+    if (move->type == MOVE_CYCLE_STOCK && !data->return_to_stock)
+    {
+        for (int i = 0; i < data->cards_moved; i++)
+        {
+            audio_play_sfx_delay(SFX_DRAW_CARD, i * 0.2f);
+        }
+    }
+    else
+    {
+        audio_play_sfx(SFX_DRAW_CARD);
+    }
+
     cards_animate_move(solitaire, *move, *data, 1);
+    // DEPENDENCIES END
 
     if (move->type == MOVE_CYCLE_STOCK)
     {
@@ -451,7 +466,21 @@ int solitaire_redo(Solitaire *solitaire)
     Move *move = solitaire->moves[solitaire->move_index];
     MoveData *data = solitaire->moves_data[solitaire->move_index];
 
+    // DEPENDENCIES BEGIN
+    if (move->type == MOVE_CYCLE_STOCK && !data->return_to_stock)
+    {
+        for (int i = 0; i < data->cards_moved; i++)
+        {
+            audio_play_sfx_delay(SFX_DRAW_CARD, i * 0.2f);
+        }
+    }
+    else
+    {
+        audio_play_sfx(SFX_DRAW_CARD);
+    }
+
     cards_animate_move(solitaire, *move, *data, 0);
+    // DEPENDENCIES END
 
     if (move->type == MOVE_CYCLE_STOCK)
     {

@@ -13,7 +13,7 @@ typedef enum LAYOUTPOSITION
     // game
     LAYOUT_SCORE,
     LAYOUT_FOUNDATION, // data: int (foundation index)
-    LAYOUT_TABLEU,     // data: int (tableu coordinate)
+    LAYOUT_TABLEU,     // data: Coordinate (tableu coordinate)
     LAYOUT_TALON,      // data: int (card index)
     LAYOUT_STOCK,
 
@@ -34,6 +34,6 @@ typedef struct Coordinate
     int y;
 } Coordinate;
 
-void layout_resize(int width, int height);
+void layout_resize();
 void layout_cardsize(int *width, int *height);
 void layout_calculate(LayoutPosition pos, void *data, CalcOut *out);

@@ -16,10 +16,13 @@ add_executable(${PROJECT_NAME}
   src/gfx/layout.c
   src/io/config.c
   src/io/textures.c
+  src/scenes/game.c 
   src/scenes/menu.c 
+  src/scenes/scene.c
+  src/scenes/settings.c
+  src/sfx/audio.c
   src/solitaire.c 
   src/main.c 
-  src/scene.c
   src/util.c
   
   libs/tomlc99/toml.c

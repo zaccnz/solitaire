@@ -27,9 +27,8 @@ typedef enum SPRITEFLAGS
     FLAGS_STOCK = 1 << 3,
     FLAGS_HITBOX = 1 << 4,
     FLAGS_ANIMATING = 1 << 5,
-    FLAGS_INVISIBLE = 1 << 6,
-    FLAGS_REVEALED = 1 << 7,
-    FLAGS_INVALIDATED = 1 << 8,
+    FLAGS_REVEALED = 1 << 6,
+    FLAGS_INVALIDATED = 1 << 7,
 } SpriteFlags;
 
 typedef struct CardSprite
@@ -66,6 +65,7 @@ CardSprite cards[VALUE_MAX * SUIT_MAX];
 CardSprite *render_list[VALUE_MAX * SUIT_MAX];
 CardSprite back_sprite;
 DragAndDrop *dnd = NULL;
+int was_deal_stock = 0;
 float held = 0;
 
 int sv_to_index(Suit suit, Value value)
@@ -301,7 +301,7 @@ void cards_position_sprites(Solitaire *solitaire, int animate)
         animation_origins[update_count].x = sprite->x;
         animation_origins[update_count].y = sprite->y;
         animation_is_behind[update_count] = talon_len - i > 3;
-        if (animation_is_behind[update_count])
+        if (!animation_is_behind[update_count] && was_deal_stock)
         {
             animation_delays[update_count] = 0.4f - min(talon_len - i - 1, 3) * 0.2f;
         }
@@ -333,6 +333,8 @@ void cards_position_sprites(Solitaire *solitaire, int animate)
         sprite->zindex = i;
     }
 
+    was_deal_stock = 0;
+
     for (int i = 0; i < update_count; i++)
     {
         update_cards[i]->flags &= ~FLAGS_INVALIDATED;
@@ -358,11 +360,11 @@ void cards_position_sprites(Solitaire *solitaire, int animate)
 void cards_init()
 {
     // todo: move into texture thingy
-    back = LoadTexture("res/SBS_2dPokerPack/Top-Down/Cards/Back - Top Down 88x124.png");
-    clubs = LoadTexture("res/SBS_2dPokerPack/Top-Down/Cards/Clubs - Top Down 88x124.png");
-    hearts = LoadTexture("res/SBS_2dPokerPack/Top-Down/Cards/Hearts - Top Down 88x124.png");
-    spades = LoadTexture("res/SBS_2dPokerPack/Top-Down/Cards/Spades - Top Down 88x124.png");
-    diamonds = LoadTexture("res/SBS_2dPokerPack/Top-Down/Cards/Diamonds - Top Down 88x124.png");
+    back = LoadTexture("res/tex/SBS_2dPokerPack/Top-Down/Cards/Back - Top Down 88x124.png");
+    clubs = LoadTexture("res/tex/SBS_2dPokerPack/Top-Down/Cards/Clubs - Top Down 88x124.png");
+    hearts = LoadTexture("res/tex/SBS_2dPokerPack/Top-Down/Cards/Hearts - Top Down 88x124.png");
+    spades = LoadTexture("res/tex/SBS_2dPokerPack/Top-Down/Cards/Spades - Top Down 88x124.png");
+    diamonds = LoadTexture("res/tex/SBS_2dPokerPack/Top-Down/Cards/Diamonds - Top Down 88x124.png");
 
     // setup cards as invisible
     for (int i = 0; i < SUIT_MAX; i++)
@@ -836,10 +838,6 @@ void cards_render(Solitaire *solitaire)
     for (int i = 0; i < SUIT_MAX * VALUE_MAX; i++)
     {
         CardSprite *sprite = render_list[i];
-        if (sprite->flags & FLAGS_INVISIBLE)
-        {
-            continue;
-        }
         Vector2 position = {sprite->x, sprite->y};
         if (!(sprite->flags & FLAGS_REVEALED))
         {
@@ -869,7 +867,7 @@ void cards_animate_to(Solitaire *solitaire, int card, int behind, float delay, i
     data->target_func = target_func;
     data->zindex = sprite->zindex;
 
-    sprite->zindex = sprite->zindex + (behind ? -52 : 52);
+    sprite->zindex = sprite->zindex + (behind ? 0 : 52);
 
     AnimationConfig config = {
         .on_update = card_anim_update,
@@ -909,10 +907,6 @@ void cards_animate_deal(Solitaire *solitaire)
         delay += 0.4f - cards[i].index * 0.2f;
         cards_animate_to(solitaire, i, 0, delay, positions[i].x, positions[i].y, NULL);
     }
-}
-
-void cards_place_and_animate()
-{
 }
 
 void cards_animate_move_card(Solitaire *solitaire, Move move, MoveData data, int undo)
@@ -1142,6 +1136,8 @@ void cards_animate_move_cycle_stock(Solitaire *solitaire, Move move, MoveData da
             }
         }
     }
+
+    was_deal_stock = 1;
 }
 
 /*

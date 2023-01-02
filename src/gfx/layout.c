@@ -1,15 +1,17 @@
 #include "gfx/layout.h"
 
+#include <raylib.h>
+
 int width = 800;
 int height = 600;
 
 int card_width = 88;
 int card_height = 124;
 
-void layout_resize(int w, int h)
+void layout_resize()
 {
-    width = w;
-    height = h;
+    width = GetScreenWidth();
+    height = GetScreenHeight();
     // update card size
 }
 

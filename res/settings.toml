@@ -14,9 +14,7 @@ lowest_moves = 20
   achieved = 1979-05-27T07:32:00Z
 
 [textures]
+packs = ["SBS_2dPokerPack"]
 cards = "SBS_2dPokerPack"
 background = "internal"
 ui = "internal"
-
-  [textures.SBS_2dPokerPack]
-  directory = "SBS_2dPokerPack"
