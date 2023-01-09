@@ -78,7 +78,18 @@ void scene_update(float delta)
         return;
     }
 
-    Scene_UpdateFunc update = scenes[scene_count - 1]->update;
-    if (update)
-        update(delta);
+    int i = scene_count - 1;
+    for (; i >= 0; i--)
+    {
+        if (!scenes[i]->popup)
+        {
+            break;
+        }
+    }
+    for (; i < scene_count; i++)
+    {
+        Scene_UpdateFunc update = scenes[i]->update;
+        if (update)
+            update(delta, i != (scene_count - 1));
+    }
 }

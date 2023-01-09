@@ -1,6 +1,6 @@
 # 🃏 c solitaire
   
-a small solitaire game programmed in C using [raylib](https://github.com/raysan5/raylib)  
+a small solitaire game programmed in C using [raylib](https://www.raylib.com/)  
 
 ## technologies
 - [raylib](https://github.com/raysan5/raylib)  
@@ -10,6 +10,8 @@ a small solitaire game programmed in C using [raylib](https://github.com/raysan5
 
 ## resources
 - [2D Poker Pack](https://screamingbrainstudios.itch.io/poker-pack) - Screaming Brain Studios  
+- [8Bit Deck Card Assets](https://drawsgood.itch.io/8bit-deck-card-assets) - DrawsGood
+- [Card Asset Pack](https://natomarcacini.itch.io/card-asset-pack) - natomarcacini
 - [Fantasy Card Game SFX Pack](https://olexmazur.itch.io/fantasy-card-game) - Olex Mazur  
 
 ## build instructions

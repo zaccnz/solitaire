@@ -1,9 +1,8 @@
 #include "gfx/animated.h"
 #include "gfx/cards.h"
-#include "sfx/audio.h"
+#include "io/pacman.h"
 #include "scenes/scene.h"
-#include "solitaire.h"
-#include "util.h"
+#include "sfx/audio.h"
 
 #include <raylib.h>
 #include <string.h>
@@ -17,13 +16,16 @@
 
 int main(void)
 {
-    // load settings.toml
-
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(800, 600, "solitaire");
 
     struct nk_context *ctx = InitNuklear(10);
 
+    // load settings.toml
+
+    pacman_reload_packs();
+
+    int pack = 0;
     audio_init();
     cards_init();
 
@@ -56,6 +58,7 @@ int main(void)
     anim_release();
     cards_free();
     audio_free();
+    pacman_free_packs();
 
     scene_pop();
     UnloadNuklear(ctx);

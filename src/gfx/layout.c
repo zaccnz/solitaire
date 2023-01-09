@@ -1,5 +1,7 @@
 #include "gfx/layout.h"
 
+#include "io/pacman.h"
+
 #include <raylib.h>
 
 int width = 800;
@@ -8,11 +10,19 @@ int height = 600;
 int card_width = 88;
 int card_height = 124;
 
+float card_vertical_spacing = 0.25f;
+
 void layout_resize()
 {
     width = GetScreenWidth();
     height = GetScreenHeight();
     // update card size
+}
+
+void layout_pack_changed()
+{
+    TexturePack *pack = pacman_get_current(TEXTURE_CARDS);
+    card_vertical_spacing = pack->card_vertical_spacing;
 }
 
 void layout_cardsize(int *width, int *height)
@@ -41,8 +51,7 @@ void layout_position_tableu(CalcOut *out, Coordinate index)
     };
 
     out->x += index.x * card_width;
-    // todo: get from texture pack
-    out->y += index.y * (float)card_height * 0.25f;
+    out->y += index.y * (float)card_height * card_vertical_spacing;
 }
 
 void layout_position_talon(CalcOut *out, int index)

@@ -38,11 +38,16 @@ void stop()
     solitaire_free(&solitaire);
 }
 
-void update(float dt)
+void update(float dt, int background)
 {
     // todo: disable play while auto completing - cards should not need update func
     // to render properly!!!
-    cards_update(&solitaire);
+    cards_update(&solitaire, background);
+
+    if (background)
+    {
+        return;
+    }
 
     if (IsKeyPressed(KEY_R))
     {

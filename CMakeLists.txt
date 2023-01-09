@@ -15,6 +15,9 @@ add_executable(${PROJECT_NAME}
   src/gfx/cards.c
   src/gfx/layout.c
   src/io/config.c
+  src/io/pacman.c
+  src/io/spritesheet.c
+  src/io/texturepack.c
   src/io/textures.c
   src/scenes/game.c 
   src/scenes/menu.c 

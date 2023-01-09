@@ -4,7 +4,7 @@ typedef void (*Scene_StartFunc)();
 typedef void (*Scene_StopFunc)();
 typedef void (*Scene_PlayFunc)();
 typedef void (*Scene_PauseFunc)();
-typedef void (*Scene_UpdateFunc)(float dt);
+typedef void (*Scene_UpdateFunc)(float dt, int background);
 typedef void (*Scene_RenderFunc)(struct nk_context *ctx);
 
 typedef struct Scene

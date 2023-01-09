@@ -12,3 +12,11 @@
 #endif
 
 int ntlen(void **array);
+
+typedef enum SUIT Suit;
+typedef enum VALUE Value;
+
+Suit suit_get_index(const char *suit);
+Value value_get_index(const char *value);
+Value values_get_index(const char *values);
+int key_get_index(const char *key);

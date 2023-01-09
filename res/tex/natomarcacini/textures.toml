@@ -1,0 +1,46 @@
+[meta]
+name = "Solitaire Cards"
+author = "natomarcacini"
+card_width = 100
+card_height = 144
+card_vertical_spacing = 0.25
+
+[[spritesheets]]
+name = "all_cards"
+texture = "Standard 52 Cards/solitaire/all_cards.png"
+dimensions = [4, 13]
+
+[cards]
+  [[cards.back]]
+  texture = "Standard 52 Cards/solitaire/individuals/card back/card_back.png"
+  name = "Default"
+  [[cards.back]]
+  texture = "Standard 52 Cards/normal_cards/individual/card back/cardBackGreen.png"
+  name = "Green"
+  [[cards.back]]
+  texture = "Standard 52 Cards/normal_cards/individual/card back/cardBackRed.png"
+  name = "Red"
+  
+  [[cards.clubs]]
+  spritesheet = "all_cards"
+  name = "Default"
+  row = 2
+  cards = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']   
+
+  [[cards.hearts]]
+  spritesheet = "all_cards"
+  name = "Default"
+  row = 1
+  cards = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']   
+
+  [[cards.spades]]
+  spritesheet = "all_cards"
+  name = "Default"
+  row = 3
+  cards = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']   
+  
+  [[cards.diamonds]]
+  spritesheet = "all_cards"
+  name = "Default"
+  row = 0
+  cards = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']   

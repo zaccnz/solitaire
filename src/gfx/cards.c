@@ -2,6 +2,7 @@
 
 #include "gfx/animated.h"
 #include "gfx/layout.h"
+#include "io/pacman.h"
 #include "util.h"
 
 #include <string.h>
@@ -9,12 +10,6 @@
 #include <stdio.h>
 #include <raylib.h>
 #include <signal.h>
-
-// todo: move into io/textures
-#define CARD_WIDTH 88
-#define CARD_HEIGHT 124
-#define CARD_COLUMNS 5
-Texture2D back, clubs, hearts, spades, diamonds;
 
 #define CLICK_TIME 0.2f
 
@@ -37,9 +32,7 @@ typedef struct CardSprite
     int x, y;
     float fx, fy;
     int zindex;
-    Rectangle frame;
     Rectangle hitbox;
-    Texture2D *texture;
 
     /* animation */
     AnimationPointer animPtr;
@@ -79,7 +72,7 @@ int card_to_index(Card *card)
 }
 
 // NOTE: next will not have been updated yet...
-void card_place_with_hitbox(CardSprite *card, Card *next)
+void card_place_with_hitbox(CardSprite *card, Card *next, float card_vertical_spacing)
 {
     CalcOut out;
     LayoutPosition pos = LAYOUT_NONE;
@@ -103,8 +96,7 @@ void card_place_with_hitbox(CardSprite *card, Card *next)
         pos = LAYOUT_TABLEU;
         data = &coord;
         hitbox = 1;
-        // todo: load from texture pack
-        hitbox_height_percentage = next == NULL ? 1.0 : 0.25;
+        hitbox_height_percentage = next == NULL ? 1.0 : card_vertical_spacing;
     }
     if (card->flags & FLAGS_TALON)
     {
@@ -226,6 +218,7 @@ void cards_animate_to(Solitaire *solitaire, int card, int behind, float delay, i
 
 void cards_position_sprites(Solitaire *solitaire, int animate)
 {
+    TexturePack *current_pack = pacman_get_current(TEXTURE_CARDS);
     int update_count = 0;
     CardSprite *update_cards[UPDATE_COUNT];
     Card *update_nexts[UPDATE_COUNT];
@@ -338,7 +331,7 @@ void cards_position_sprites(Solitaire *solitaire, int animate)
     for (int i = 0; i < update_count; i++)
     {
         update_cards[i]->flags &= ~FLAGS_INVALIDATED;
-        card_place_with_hitbox(update_cards[i], update_nexts[i]);
+        card_place_with_hitbox(update_cards[i], update_nexts[i], current_pack->card_vertical_spacing);
     }
 
     if (!animate)
@@ -359,13 +352,6 @@ void cards_position_sprites(Solitaire *solitaire, int animate)
 
 void cards_init()
 {
-    // todo: move into texture thingy
-    back = LoadTexture("res/tex/SBS_2dPokerPack/Top-Down/Cards/Back - Top Down 88x124.png");
-    clubs = LoadTexture("res/tex/SBS_2dPokerPack/Top-Down/Cards/Clubs - Top Down 88x124.png");
-    hearts = LoadTexture("res/tex/SBS_2dPokerPack/Top-Down/Cards/Hearts - Top Down 88x124.png");
-    spades = LoadTexture("res/tex/SBS_2dPokerPack/Top-Down/Cards/Spades - Top Down 88x124.png");
-    diamonds = LoadTexture("res/tex/SBS_2dPokerPack/Top-Down/Cards/Diamonds - Top Down 88x124.png");
-
     // setup cards as invisible
     for (int i = 0; i < SUIT_MAX; i++)
     {
@@ -395,8 +381,6 @@ void cards_init()
     back_sprite.animPtr.index = -1;
     back_sprite.animPtr.generation = -1;
     back_sprite.index = -1;
-
-    cards_set_textures();
 }
 
 void cards_free()
@@ -409,58 +393,6 @@ void cards_free()
             anim_cancel(sprite->animPtr);
         }
     }
-
-    // todo: move into texture thingy
-    UnloadTexture(clubs);
-    UnloadTexture(hearts);
-    UnloadTexture(spades);
-    UnloadTexture(diamonds);
-    UnloadTexture(back);
-}
-
-void cards_set_textures()
-{
-    // todo: load from texture manager
-    for (int i = 0; i < SUIT_MAX; i++)
-    {
-        for (int j = 0; j < VALUE_MAX; j++)
-        {
-            CardSprite *sprite = &cards[i * VALUE_MAX + j];
-            sprite->frame.width = CARD_WIDTH;
-            sprite->frame.height = CARD_HEIGHT;
-
-            switch (sprite->suit)
-            {
-            case CLUBS:
-                sprite->texture = &clubs;
-                break;
-            case HEARTS:
-                sprite->texture = &hearts;
-                break;
-            case SPADES:
-                sprite->texture = &spades;
-                break;
-            case DIAMONDS:
-                sprite->texture = &diamonds;
-                break;
-            default:
-                printf("invalid suit %d\n", sprite->suit);
-                break;
-            }
-
-            int x = sprite->value % CARD_COLUMNS;
-            int y = sprite->value / CARD_COLUMNS;
-
-            sprite->frame.x = x * CARD_WIDTH;
-            sprite->frame.y = y * CARD_HEIGHT;
-        }
-    }
-
-    back_sprite.frame.width = CARD_WIDTH;
-    back_sprite.frame.height = CARD_HEIGHT;
-    back_sprite.frame.x = 0;
-    back_sprite.frame.y = 0;
-    back_sprite.texture = &back;
 }
 
 int card_check_hit(Vector2 pos, SpriteFlags flags_mask)
@@ -718,9 +650,14 @@ void cards_on_drop(Solitaire *solitaire, CardSprite *target)
     }
 }
 
-void cards_update(Solitaire *solitaire)
+void cards_update(Solitaire *solitaire, int background)
 {
     cards_position_sprites(solitaire, 1);
+
+    if (background)
+    {
+        return;
+    }
 
     int down = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
     int released = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
@@ -808,19 +745,26 @@ void cards_update(Solitaire *solitaire)
     }
 }
 
-void cards_render_card(Card *card)
-{
-    CardSprite *sprite = &cards[card_to_index(card)];
-    Vector2 position = {sprite->x, sprite->y};
-    if (!card->shown)
-    {
-        sprite = &back_sprite;
-    }
-    DrawTextureRec(*sprite->texture, sprite->frame, position, WHITE);
-}
-
 void cards_render(Solitaire *solitaire)
 {
+    TexturePack *pack_cards = pacman_get_current(TEXTURE_CARDS);
+    TexturePack *pack_backs = pacman_get_current(TEXTURE_BACKS);
+
+    Textures *tex_cards = pacman_get_current_textures(TEXTURE_CARDS);
+    Textures *tex_backs = pacman_get_current_textures(TEXTURE_BACKS);
+
+    Rectangle source = {
+        .x = 0,
+        .y = 0,
+        .width = 0,
+        .height = 0,
+    };
+
+    int w, h;
+    layout_cardsize(&w, &h);
+    Rectangle dest = {0, 0, w, h};
+    Vector2 origin = {0, 0};
+
     // Sort render list by zindex (insertion sort)
     for (int i = 1; i < SUIT_MAX * VALUE_MAX; i++)
     {
@@ -838,12 +782,28 @@ void cards_render(Solitaire *solitaire)
     for (int i = 0; i < SUIT_MAX * VALUE_MAX; i++)
     {
         CardSprite *sprite = render_list[i];
-        Vector2 position = {sprite->x, sprite->y};
+        int index = sprite->suit * VALUE_MAX + sprite->value;
+        Texture texture = tex_cards->cards[index];
+
         if (!(sprite->flags & FLAGS_REVEALED))
         {
-            sprite = &back_sprite;
+            texture = tex_backs->card_back;
         }
-        DrawTextureRec(*sprite->texture, sprite->frame, position, WHITE);
+
+        source.width = texture.width;
+        source.height = texture.height;
+        dest.x = sprite->x;
+        dest.y = sprite->y;
+        DrawTexturePro(texture, source, dest, origin, 0.0f, WHITE);
+    }
+}
+
+void cards_invalidate_all()
+{
+    for (int i = 0; i < SUIT_MAX * VALUE_MAX; i++)
+    {
+        CardSprite *sprite = &cards[i];
+        sprite->flags |= FLAGS_INVALIDATED;
     }
 }
 
@@ -886,6 +846,7 @@ void cards_animate_to(Solitaire *solitaire, int card, int behind, float delay, i
 
 void cards_animate_deal(Solitaire *solitaire)
 {
+    Textures *textures = pacman_get_current_textures(TEXTURE_CARDS);
     for (int i = 0; i < VALUE_MAX * SUIT_MAX; i++)
     {
         cards[i].flags |= FLAGS_INVALIDATED;
@@ -896,8 +857,8 @@ void cards_animate_deal(Solitaire *solitaire)
     {
         positions[i].x = cards[i].x;
         positions[i].y = cards[i].y;
-        cards[i].x = -CARD_WIDTH;
-        cards[i].y = -CARD_HEIGHT;
+        cards[i].x = -textures->cards[i].width;
+        cards[i].y = -textures->cards[i].height;
     }
 
     // play deal animation (call on game created)
@@ -1166,16 +1127,19 @@ void cards_animate_reveal(Solitaire *solitaire, int tableu_x, int tableu_y)
     Card *card = solitaire->tableu[tableu_x][tableu_y];
     CardSprite *sprite = &cards[card_to_index(card)];
 
+    // note: if a card is revealed, there will be no next card.  if a card is hidden,
+    // it will have no hitbox.  therefore we can pass '0.0' as card_vertical_spacing
+
     if (card->shown)
     {
         sprite->flags |= FLAGS_REVEALED;
-        card_place_with_hitbox(sprite, NULL);
+        card_place_with_hitbox(sprite, NULL, 0.0);
         // start animation to show
     }
     else
     {
         sprite->flags &= ~FLAGS_REVEALED;
-        card_place_with_hitbox(sprite, solitaire->tableu[tableu_x][tableu_y + 1]);
+        card_place_with_hitbox(sprite, solitaire->tableu[tableu_x][tableu_y + 1], 0.0);
         // start animation to hide
     }
 }

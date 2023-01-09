@@ -3,48 +3,77 @@ name = "SBS 2d Poker Pack"
 author = "Screaming Brain Studios"
 card_width = 88
 card_height = 124
-card_vertical_spacing = 0.25
+card_vertical_spacing = 0.25 # how far apart (vertically) tableu cards should be
 
-[textures]
-back = "Top-Down/Cards/Back - Top Down 88x124.png"
-clubs = "Top-Down/Cards/Clubs - Top Down 88x124.png"
-hearts = "Top-Down/Cards/Hearts - Top Down 88x124.png"
-spades = "Top-Down/Cards/Spades - Top Down 88x124.png"
-diamonds = "Top-Down/Cards/Diamonds - Top Down 88x124.png"
+[[spritesheets]]
+name = "back"
+texture = "Top-Down/Cards/Back - Top Down 88x124.png"
+dimensions = [1, 2] # [rows, columns]
+[[spritesheets]]
+name = "clubs"
+texture = "Top-Down/Cards/Clubs - Top Down 88x124.png"
+dimensions = [3, 5]
+[[spritesheets]]
+name = "hearts"
+texture = "Top-Down/Cards/Hearts - Top Down 88x124.png"
+dimensions = [3, 5]
+[[spritesheets]]
+name = "spades"
+texture = "Top-Down/Cards/Spades - Top Down 88x124.png"
+dimensions = [3, 5]
+[[spritesheets]]
+name = "diamonds"
+texture = "Top-Down/Cards/Diamonds - Top Down 88x124.png"
+dimensions = [3, 5]
+
+# By setting name = "Default", these items are in the menu under Pack Name.
+# For variants, set a name.  This will add another option Pack Name | Name 
+# in the menu.  Note that every face card must be defined under default as 
+# we fallback to the Default textures when a named variant does not define
+# some card.
+
+[[backgrounds]]
+  name = "Default"
+  texture = "background.png"
 
 [cards]
-  [cards.back]
-  texture = "back"
-  subset = [0, 0, 88, 124]
+  # When defining a single card, e.g., back, A_diamonds, 5_spades, use row and column.
+  [[cards.back]]
+  spritesheet = "back"
+  name = "Red"
+  row = 0
+  column = 0
   
-  [cards.clubs]
-  texture = "clubs"
-  rows = 3
-  columns = 5
-  cards = ['A', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', '', '']
+  [[cards.back]]
+  spritesheet = "back"
+  name = "Blue"
+  row = 0
+  column = 1
 
-  [cards.hearts]
-  texture = "hearts"
-  rows = 3
-  columns = 5
-  cards = ['A', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', '', '']
-
-  [cards.spades]
-  texture = "spades"
-  rows = 3
-  columns = 5
-  cards = ['A', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', '', '']
+  # If you are defining multiple cards, write out the cards in row-wise order.
+  # You can also specify a single row or column's cards by setting a row, col.
+  # Multiple cards can be grouped by suit or value.  E.g. aces, spades, fives.
+  # E.g. this spritesheet has the shape
+  # A 2 3 4 5
+  # 6 7 8 9 10
+  # J Q K - -
   
-  [cards.diamonds]
-  texture = "diamonds"
-  rows = 3
-  columns = 5
-  cards = ['A', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', '', '']
+  [[cards.clubs]]
+  spritesheet = "clubs"
+  name = "Default"
+  cards = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', '', '']  
 
-  # individual cards can be changed as follows
-  # [cards.5d]
-  # texture = "diamonds"
-  # rows = 3
-  # columns = 5
-  # row = 0
-  # col = 4
+  [[cards.hearts]]
+  spritesheet = "hearts"
+  name = "Default"
+  cards = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', '', '']
+
+  [[cards.spades]]
+  spritesheet = "spades"
+  name = "Default"
+  cards = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', '', '']
+  
+  [[cards.diamonds]]
+  spritesheet = "diamonds"
+  name = "Default"
+  cards = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', '', '']
