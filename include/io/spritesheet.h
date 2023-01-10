@@ -10,8 +10,6 @@ typedef struct Spritesheet
     char *name;
     Image image;
     int rows, cols;
-    int border_top, border_bottom, border_left, border_right;
-    int gap_x, gap_y;
 } Spritesheet;
 
 int spritesheet_load_all(toml_array_t *spritesheets, TexturePack *pack);

@@ -1,9 +1,7 @@
 [meta]
 name = "SBS 2d Poker Pack"
 author = "Screaming Brain Studios"
-card_width = 88
-card_height = 124
-card_vertical_spacing = 0.25 # how far apart (vertically) tableu cards should be
+card_vertical_spacing = 0.25 # how far apart tableu cards should be
 
 [[spritesheets]]
 name = "back"
@@ -29,8 +27,8 @@ dimensions = [3, 5]
 # By setting name = "Default", these items are in the menu under Pack Name.
 # For variants, set a name.  This will add another option Pack Name | Name 
 # in the menu.  Note that every face card must be defined under default as 
-# we fallback to the Default textures when a named variant does not define
-# some card.
+# we fallback to the Default textures when a named variant is missing some
+# card.
 
 [[backgrounds]]
   name = "Default"
@@ -38,6 +36,7 @@ dimensions = [3, 5]
 
 [cards]
   # When defining a single card, e.g., back, A_diamonds, 5_spades, use row and column.
+  # instead of a spritesheet, you can define texture = "path/to/card.png"
   [[cards.back]]
   spritesheet = "back"
   name = "Red"

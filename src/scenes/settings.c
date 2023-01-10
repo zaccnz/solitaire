@@ -13,7 +13,6 @@ PackPointer *pointers = NULL;
 
 struct DropdownData
 {
-    int current;
     int last;
     char *avail[256];
     PackPointer *pointers[256];
@@ -92,11 +91,22 @@ void settings_update(float dt, int background)
     }
 }
 
+int settings_nk_draw_dropdown(struct nk_context *ctx, char *name, TextureType type, struct DropdownData *data)
+{
+    nk_label(ctx, name, NK_TEXT_LEFT);
+    nk_layout_row_static(ctx, 25, 200, 1);
+    int current = nk_combo(ctx, data->avail, data->length,
+                           data->last, 25, nk_vec2(200, 200));
+
+    if (current != data->last)
+    {
+        data->last = current;
+        pacman_set_current(*data->pointers[current], type);
+    }
+}
+
 void settings_render(struct nk_context *ctx)
 {
-    DrawText("the game is paused!", 190, 200, 20, LIGHTGRAY);
-    DrawText("press [p] to unpause!", 190, 220, 20, LIGHTGRAY);
-
     if (nk_begin(ctx, "Nuklear", nk_rect(100, 100, 400, 300), NK_WINDOW_BORDER))
     {
         nk_layout_row_static(ctx, 30, 120, 1);
@@ -106,42 +116,15 @@ void settings_render(struct nk_context *ctx)
         }
         if (nk_button_label(ctx, "reload textures"))
         {
+            // pacman_reload_packs(); // crashes the app >:(
             settings_refresh_dropdown();
         }
 
         /* default combobox */
         nk_layout_row_static(ctx, 30, 200, 1);
-        nk_label(ctx, "Background", NK_TEXT_LEFT);
-        nk_layout_row_static(ctx, 25, 200, 1);
-        background_data.current = nk_combo(ctx, background_data.avail, background_data.length,
-                                           background_data.current, 25, nk_vec2(200, 200));
-
-        nk_label(ctx, "Card Back", NK_TEXT_LEFT);
-        nk_layout_row_static(ctx, 25, 200, 1);
-        backs_data.current = nk_combo(ctx, backs_data.avail, backs_data.length,
-                                      backs_data.current, 25, nk_vec2(200, 200));
-        nk_label(ctx, "Cards", NK_TEXT_LEFT);
-        nk_layout_row_static(ctx, 25, 200, 1);
-        cards_data.current = nk_combo(ctx, cards_data.avail, cards_data.length,
-                                      cards_data.current, 25, nk_vec2(200, 200));
-
-        if (background_data.current != background_data.last)
-        {
-            background_data.last = background_data.current;
-            pacman_set_current(*background_data.pointers[background_data.current], TEXTURE_BACKGROUNDS);
-        }
-        if (backs_data.current != backs_data.last)
-        {
-            PackPointer *ptr = backs_data.pointers[backs_data.current];
-            printf("backs changed to %d: %s %s\n", backs_data.current, ptr->name, ptr->texture_name);
-            backs_data.last = backs_data.current;
-            pacman_set_current(*ptr, TEXTURE_BACKS);
-        }
-        if (cards_data.current != cards_data.last)
-        {
-            cards_data.last = cards_data.current;
-            pacman_set_current(*cards_data.pointers[cards_data.current], TEXTURE_CARDS);
-        }
+        settings_nk_draw_dropdown(ctx, "Background", TEXTURE_BACKGROUNDS, &background_data);
+        settings_nk_draw_dropdown(ctx, "Card Back", TEXTURE_BACKS, &backs_data);
+        settings_nk_draw_dropdown(ctx, "Cards", TEXTURE_CARDS, &cards_data);
     }
     nk_end(ctx);
 }

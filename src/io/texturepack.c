@@ -157,7 +157,7 @@ int pack_load_card(TexturePack *pack, toml_table_t *card, const char *key)
     }
     else if (texture)
     {
-        result = texture_from_path(pack->path, texture, out);
+        result = texture_from_path(texture, out);
         free(texture);
     }
     else
@@ -172,7 +172,7 @@ int pack_load_suit_or_values(TexturePack *pack, toml_table_t *card, Suit suit, V
     toml_datum_t name = toml_string_in(card, "name");
     if (!name.ok)
     {
-        printf("pack %s suit defintion %s missing name\n", pack->name, toml_table_key(card));
+        printf("pack %s cards defintion %s missing name\n", pack->name, toml_table_key(card));
         return 0;
     }
 
@@ -184,16 +184,42 @@ int pack_load_suit_or_values(TexturePack *pack, toml_table_t *card, Suit suit, V
     }
     textures->type |= TEXTURE_CARDS;
 
+    toml_array_t *files = toml_array_in(card, "files");
+    if (files)
+    {
+        int length = suit == SUIT_MAX ? SUIT_MAX : VALUE_MAX;
+        if (toml_array_nelem(files) != length)
+        {
+            printf("cards definition %s files should have %d values, not %d\n",
+                   toml_table_key(card), length, toml_array_nelem(files));
+            return 0;
+        }
+        toml_datum_t path = toml_string_in(card, "path");
+        if (!path.ok)
+        {
+            path.u.s = malloc(sizeof(char));
+            path.u.s[0] = 0;
+        }
+
+        if (!textures_from_directory(textures, path.u.s, suit, value, files))
+        {
+            printf("at %s\n", toml_table_key(card));
+        }
+
+        free(path.u.s);
+        return 1;
+    }
+
     toml_datum_t spritesheet = toml_string_in(card, "spritesheet");
     if (!spritesheet.ok)
     {
-        printf("card suit definition %s missing spritesheet\n", toml_table_key(card));
+        printf("cards definition %s missing spritesheet\n", toml_table_key(card));
         return 0;
     }
     Spritesheet *sheet = pack_get_spritesheet(pack, spritesheet.u.s);
     if (!sheet)
     {
-        printf("card suit definition %s invalid spritesheet %s\n", toml_table_key(card), spritesheet.u.s);
+        printf("cards definition %s invalid spritesheet %s\n", toml_table_key(card), spritesheet.u.s);
         return 0;
     }
     free(spritesheet.u.s);
@@ -203,14 +229,14 @@ int pack_load_suit_or_values(TexturePack *pack, toml_table_t *card, Suit suit, V
 
     if (row.ok && column.ok)
     {
-        printf("card suit definition %s cannot define both row and column\n", toml_table_key(card));
+        printf("cards definition %s cannot define both row and column\n", toml_table_key(card));
         return 0;
     }
 
     toml_array_t *arr = toml_array_in(card, "cards");
     if (!arr)
     {
-        printf("card suit definition %s missing cards\n", toml_table_key(card));
+        printf("cards definition %s missing cards\n", toml_table_key(card));
         return 0;
     }
 
@@ -223,12 +249,13 @@ int pack_load_suit_or_values(TexturePack *pack, toml_table_t *card, Suit suit, V
     {
         if (row.u.i < 0 || row.u.i >= sheet->rows)
         {
-            printf("card suit definition %s spritesheet has no row %d\n", toml_table_key(card), row.u.i);
+            printf("cards definition %s spritesheet has no row %d\n", toml_table_key(card), row.u.i);
             return 0;
         }
         if (size != sheet->cols)
         {
-            printf("card suit definition %s spritesheet has %d columns, cards has %d entries\n", toml_table_key(card), sheet->cols, size);
+            printf("cards definition %s spritesheet has %d columns, cards has %d entries\n",
+                   toml_table_key(card), sheet->cols, size);
             return 0;
         }
         index = row.u.i * sheet->cols;
@@ -239,12 +266,12 @@ int pack_load_suit_or_values(TexturePack *pack, toml_table_t *card, Suit suit, V
     {
         if (column.u.i < 0 || column.u.i >= sheet->cols)
         {
-            printf("card suit definition %s spritesheet has no column %d\n", toml_table_key(card), column.u.i);
+            printf("cards definition %s spritesheet has no column %d\n", toml_table_key(card), column.u.i);
             return 0;
         }
         if (size != sheet->rows)
         {
-            printf("card suit definition %s spritesheet has %d rows, cards has %d entries\n", sheet->rows, size);
+            printf("cards definition %s spritesheet has %d rows, cards has %d entries\n", sheet->rows, size);
             return 0;
         }
         index = column.u.i;
@@ -256,7 +283,7 @@ int pack_load_suit_or_values(TexturePack *pack, toml_table_t *card, Suit suit, V
         toml_datum_t value_toml = toml_string_at(arr, i);
         if (!value_toml.ok)
         {
-            printf("card suit definition %s cards must be string at index %d\n", toml_table_key(card), i);
+            printf("cards definition %s cards must be string at index %d\n", toml_table_key(card), i);
             return 0;
         }
         Suit card_suit;
@@ -351,14 +378,12 @@ int pack_load(const char *path, TexturePack *pack)
     pack->texture_count = 0;
 
     char errbuf[200];
-    char file[2048];
-    snprintf(file, 2048, "%s/textures.toml", path);
 
-    char *contents = LoadFileText(file);
+    char *contents = physfs_read_to_mem("textures.toml", NULL);
 
     if (!contents)
     {
-        printf("failed to read file %s\n", file);
+        printf("failed to read file %s\n", path);
         return 0;
     }
 
@@ -375,34 +400,34 @@ int pack_load(const char *path, TexturePack *pack)
     toml_table_t *meta = toml_table_in(pack_toml, "meta");
     if (!meta)
     {
-        printf("pack %s missing metadata\n", file);
+        printf("pack %s missing metadata\n", path);
         return 0;
     }
 
     if (!pack_load_metadata(pack, meta))
     {
-        printf("pack %s failed to load metadata\n", file);
+        printf("pack %s failed to load metadata\n", path);
         return 0;
     }
 
     toml_array_t *spritesheets = toml_array_in(pack_toml, "spritesheets");
     if (spritesheets && !spritesheet_load_all(spritesheets, pack))
     {
-        printf("pack %s failed to load spritesheets\n", file);
+        printf("pack %s failed to load spritesheets\n", path);
         return 0;
     }
 
     toml_array_t *backgrounds = toml_array_in(pack_toml, "backgrounds");
     if (backgrounds && !pack_load_backgrounds(pack, backgrounds))
     {
-        printf("pack %s failed to load backgrounds\n", file);
+        printf("pack %s failed to load backgrounds\n", path);
         return 0;
     }
 
     toml_table_t *cards = toml_table_in(pack_toml, "cards");
     if (cards && !pack_load_cards(pack, cards))
     {
-        printf("pack %s failed to load cards\n", file);
+        printf("pack %s failed to load cards\n", path);
         return 0;
     }
 
@@ -470,6 +495,7 @@ int pack_free(TexturePack *pack)
     free(pack->author);
     free(pack->path);
     free(pack->spritesheets);
+    free(pack->textures);
 
     return 0;
 }

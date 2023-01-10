@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 project(solitaire)
 
+add_subdirectory(libs/physfs EXCLUDE_FROM_ALL)
 add_subdirectory(libs/raylib EXCLUDE_FROM_ALL)
 add_subdirectory(libs/raylib-nuklear EXCLUDE_FROM_ALL)
 
@@ -31,7 +32,7 @@ add_executable(${PROJECT_NAME}
   libs/tomlc99/toml.c
 )
 
-target_link_libraries(${PROJECT_NAME} raylib raylib_nuklear)
+target_link_libraries(${PROJECT_NAME} raylib raylib_nuklear physfs-static)
 
 if (APPLE)
     target_link_libraries(${PROJECT_NAME} "-framework IOKit")

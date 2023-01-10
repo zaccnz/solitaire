@@ -3,6 +3,8 @@
 #include "gfx/cards.h"
 #include "gfx/layout.h"
 
+#include <physfs.h>
+#include <raylib.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -20,36 +22,120 @@ typedef struct CurrentPack
 
 CurrentPack pack_background = {0}, pack_backs = {0}, pack_cards = {0};
 
+int pacman_mount_pack(char path[2048], char *file)
+{
+    if (IsFileExtension(file, ".zip"))
+    {
+        snprintf(path, 2048, "res/tex/%s", file);
+        PHYSFS_mount(path, NULL, 0);
+
+        if (!PHYSFS_exists("textures.toml"))
+        {
+            char **dirs = PHYSFS_enumerateFiles("");
+
+            if (dirs[0] == NULL)
+            {
+                return 0;
+            }
+
+            snprintf(path, 2048, "%s/textures.toml", dirs[0]);
+            int exists = PHYSFS_exists(path);
+
+            snprintf(path, 2048, "res/tex/%s", file);
+
+            if (!exists)
+            {
+                PHYSFS_unmount(path);
+                PHYSFS_freeList(dirs);
+                return 0;
+            }
+
+            PHYSFS_setRoot(path, dirs[0]);
+            PHYSFS_freeList(dirs);
+        }
+    }
+    else
+    {
+        snprintf(path, 2048, "res/tex/%s", file);
+
+        if (!DirectoryExists(path))
+        {
+            return 0;
+        }
+
+        snprintf(path, 2048, "res/tex/%s/textures.toml", file);
+        if (!FileExists(path))
+        {
+            return 0;
+        }
+
+        snprintf(path, 2048, "res/tex/%s", file);
+        PHYSFS_mount(path, NULL, 0);
+    }
+
+    return 1;
+}
+
 void pacman_reload_packs()
 {
     if (packs)
     {
         pacman_free_packs();
     }
-    else
+
+    int count = 0;
+    pack_count = 0;
+    char **files = GetDirectoryFiles("res/tex", &count);
+    packs = malloc(sizeof(TexturePack) * count);
+    char path[2048];
+
+    for (int i = 0; i < count; i++)
     {
-        // todo: do not hardcode, load from config and have sensible error
-        // handling
-        strcpy(pack_background.pointer.name, "SBS 2d Poker Pack");
-        strcpy(pack_background.pointer.texture_name, "Default");
-        strcpy(pack_backs.pointer.name, "SBS 2d Poker Pack");
-        strcpy(pack_backs.pointer.texture_name, "Red");
-        strcpy(pack_cards.pointer.name, "SBS 2d Poker Pack");
-        strcpy(pack_cards.pointer.texture_name, "Default");
+        if (!pacman_mount_pack(path, files[i]))
+        {
+            continue;
+        }
+
+        if (pack_load(path, &packs[pack_count]))
+        {
+            pack_count++;
+        }
+
+        PHYSFS_unmount(path);
+
+        if (pack_count >= count)
+        {
+            printf("more packs then file entries?\n");
+            break;
+        }
     }
 
-    // TODO: find texture packs by path
+    ClearDirectoryFiles();
 
-    packs = malloc(sizeof(TexturePack) * 3);
-    pack_count = 3;
+    if (pack_background.pack && pack_backs.pack && pack_cards.pack)
+    {
+        return;
+    }
 
-    pack_load("res/tex/SBS_2dPokerPack", &packs[0]);
-    pack_load("res/tex/8bit", &packs[1]);
-    pack_load("res/tex/natomarcacini", &packs[2]);
+    count = 0;
+    PackPointer *ptr = pacman_list_packs(&count);
+    for (int i = 0; i < count; i++)
+    {
+        if (!pack_background.pack && ptr[i].type & TEXTURE_BACKGROUNDS)
+        {
+            pacman_set_current(ptr[i], TEXTURE_BACKGROUNDS);
+        }
 
-    pacman_set_current(pack_background.pointer, TEXTURE_BACKGROUNDS);
-    pacman_set_current(pack_backs.pointer, TEXTURE_BACKS);
-    pacman_set_current(pack_cards.pointer, TEXTURE_CARDS);
+        if (!pack_backs.pack && ptr[i].type & TEXTURE_BACKS)
+        {
+            pacman_set_current(ptr[i], TEXTURE_BACKS);
+        }
+
+        if (!pack_cards.pack && ptr[i].type & TEXTURE_CARDS)
+        {
+            pacman_set_current(ptr[i], TEXTURE_CARDS);
+        }
+    }
 }
 
 void pacman_free_packs()

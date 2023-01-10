@@ -2,6 +2,7 @@
 
 #include "solitaire.h"
 
+#include <physfs.h>
 #include <stdlib.h>
 
 int ntlen(void **array)
@@ -133,4 +134,38 @@ int key_get_index(const char *key)
     }
 
     return suit * VALUE_MAX + value;
+}
+
+char *physfs_read_to_mem(const char *path, int *size)
+{
+    PHYSFS_File *file = PHYSFS_openRead(path);
+    if (!file)
+    {
+        printf("failed to open file %s for reading: %s\n", PHYSFS_getLastError(), path);
+        return NULL;
+    }
+
+    char *contents;
+    int len = PHYSFS_fileLength(file);
+
+    if (size)
+    {
+        contents = malloc(len);
+        *size = len;
+    }
+    else
+    {
+        contents = malloc(len + 1);
+        contents[len] = 0;
+    }
+
+    if (!contents)
+    {
+        printf("failed to allocate space (%d bytes) for file %s\n", *size, path);
+        return NULL;
+    }
+
+    PHYSFS_readBytes(file, contents, size ? *size : len);
+
+    return contents;
 }

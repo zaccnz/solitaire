@@ -20,3 +20,5 @@ Suit suit_get_index(const char *suit);
 Value value_get_index(const char *value);
 Value values_get_index(const char *values);
 int key_get_index(const char *key);
+
+char *physfs_read_to_mem(const char *file, int *size);

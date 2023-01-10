@@ -5,6 +5,7 @@ a small solitaire game programmed in C using [raylib](https://www.raylib.com/)
 ## technologies
 - [raylib](https://github.com/raysan5/raylib)  
 - [raylib-nuklear](https://github.com/RobLoach/raylib-nuklear)  
+- [PhysFS](https://icculus.org/physfs/)
 - [tomlc99](https://github.com/cktan/tomlc99)  
 - [CMake](https://cmake.org/)  
 

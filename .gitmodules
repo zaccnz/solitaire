@@ -7,3 +7,6 @@
 [submodule "libs/raylib-nuklear"]
 	path = libs/raylib-nuklear
 	url = https://github.com/RobLoach/raylib-nuklear.git
+[submodule "libs/physfs"]
+	path = libs/physfs
+	url = https://github.com/icculus/physfs.git

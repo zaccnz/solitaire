@@ -29,43 +29,6 @@ int spritesheet_load_dimensions(Spritesheet *sheet, toml_array_t *dimensions)
     sheet->cols = columns.u.i;
 }
 
-int spritesheet_load_borders(Spritesheet *sheet, toml_array_t *borders)
-{
-    int count = toml_array_nelem(borders);
-
-    if (count != 2 && count != 4)
-    {
-        printf("spritesheet %s invalid borders: must be [x, y] or [left, top, bottom, right]\n", sheet->name);
-        return 0;
-    }
-
-    int values[4] = {0};
-    for (int i = 0; i < count; i++)
-    {
-        toml_datum_t value = toml_int_at(borders, i);
-        if (!value.ok)
-        {
-            printf("spritesheet %s invalid borders: values (%d) must be integer\n", sheet->name, i);
-            return 0;
-        }
-
-        values[i] = value.u.i;
-    }
-
-    if (count == 2)
-    {
-        sheet->border_left = sheet->border_right = values[0];
-        sheet->border_top = sheet->border_bottom = values[1];
-    }
-    else
-    {
-        sheet->border_left = values[0];
-        sheet->border_top = values[1];
-        sheet->border_bottom = values[2];
-        sheet->border_right = values[3];
-    }
-}
-
 int spritesheet_load(Spritesheet *sheet, toml_table_t *toml, TexturePack *pack)
 {
     toml_datum_t name = toml_string_in(toml, "name");
@@ -87,14 +50,17 @@ int spritesheet_load(Spritesheet *sheet, toml_table_t *toml, TexturePack *pack)
         return 0;
     }
 
-    char spritesheet_texture_path[2048];
-    snprintf(spritesheet_texture_path, 2048, "%s/%s", pack->path, path.u.s);
-    free(path.u.s);
+    int size = 0;
+    char *data = physfs_read_to_mem(path.u.s, &size);
+    if (!data)
+    {
+        return 0;
+    }
 
-    sheet->image = LoadImage(spritesheet_texture_path);
+    sheet->image = LoadImageFromMemory(GetFileExtension(path.u.s), data, size);
     if (!sheet->image.data)
     {
-        printf("spritesheet %s failed to load texture %s\n", sheet->name, spritesheet_texture_path);
+        printf("spritesheet %s failed to load texture %s\n", sheet->name, path.u.s);
         return 0;
     }
 
@@ -104,16 +70,12 @@ int spritesheet_load(Spritesheet *sheet, toml_table_t *toml, TexturePack *pack)
         return 0;
     }
 
-    toml_array_t *borders = toml_array_in(toml, "borders");
-    if (borders && !spritesheet_load_borders(sheet, borders))
-    {
-        return 0;
-    }
-
     if (!spritesheet_validate(sheet, pack))
     {
         return 0;
     }
+
+    free(path.u.s);
 
     return 1;
 }
@@ -142,8 +104,6 @@ int spritesheet_load_all(toml_array_t *spritesheets, TexturePack *pack)
 
 int spritesheet_validate(Spritesheet *spritesheet)
 {
-    // todo: new spritesheet validation using borders and gap
-
     /*
         if (spritesheet->image.width / spritesheet->cols != pack->card_width)
         {
@@ -166,7 +126,6 @@ void spritesheet_free(Spritesheet *spritesheet)
 
 int spritesheet_get_texture(Spritesheet *spritesheet, TexturePack *pack, Texture *out, int row, int col)
 {
-    // todo: calculate using borders, gap, etc
     int width = spritesheet->image.width / spritesheet->cols;
     int height = spritesheet->image.height / spritesheet->rows;
     int x = col * width;

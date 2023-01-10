@@ -846,7 +846,9 @@ void cards_animate_to(Solitaire *solitaire, int card, int behind, float delay, i
 
 void cards_animate_deal(Solitaire *solitaire)
 {
-    Textures *textures = pacman_get_current_textures(TEXTURE_CARDS);
+    int width, height;
+    layout_cardsize(&width, &height);
+
     for (int i = 0; i < VALUE_MAX * SUIT_MAX; i++)
     {
         cards[i].flags |= FLAGS_INVALIDATED;
@@ -857,8 +859,8 @@ void cards_animate_deal(Solitaire *solitaire)
     {
         positions[i].x = cards[i].x;
         positions[i].y = cards[i].y;
-        cards[i].x = -textures->cards[i].width;
-        cards[i].y = -textures->cards[i].height;
+        cards[i].x = -width;
+        cards[i].y = -height;
     }
 
     // play deal animation (call on game created)

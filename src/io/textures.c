@@ -1,6 +1,7 @@
 #include "io/textures.h"
 
 #include "io/texturepack.h"
+#include "util.h"
 
 Textures *textures_find(TexturePack *pack, const char *textures_name)
 {
@@ -93,16 +94,59 @@ int textures_fill_with_default(TexturePack *pack)
     return 1;
 }
 
-int texture_from_path(char *pack_path, char *path, Texture *out)
+int texture_from_path(char *path, Texture *out)
 {
-    char texture_path[2048];
-    snprintf(texture_path, 2048, "%s/%s", pack_path, path);
-
-    *out = LoadTexture(texture_path);
-    if (out->id <= 0)
+    int size = 0;
+    char *data = physfs_read_to_mem(path, &size);
+    if (!data)
     {
-        printf("texture %s (%s) invalid\n", path, texture_path);
         return 0;
     }
+
+    Image image = LoadImageFromMemory(GetFileExtension(path), data, size);
+    *out = LoadTextureFromImage(image);
+    UnloadImage(image);
+    if (out->id <= 0)
+    {
+        printf("texture %s invalid\n", path);
+        return 0;
+    }
+    return 1;
+}
+
+int textures_from_directory(Textures *textures, char *path, Suit suit, Value value, toml_array_t *files)
+{
+    char full_path[2048];
+
+    for (int i = 0; i < toml_array_nelem(files); i++)
+    {
+        toml_datum_t value_toml = toml_string_at(files, i);
+        if (!value_toml.ok)
+        {
+            printf("failed to read files: %d is not a string\n", i);
+            return 0;
+        }
+
+        int card = 0;
+
+        if (suit == SUIT_MAX)
+        {
+            card = i * VALUE_MAX + value;
+        }
+        else if (value == VALUE_MAX)
+        {
+            card = suit * VALUE_MAX + i;
+        }
+
+        snprintf(full_path, 2048, "%s/%s", path, value_toml.u.s);
+
+        if (!texture_from_path(full_path, &textures->cards[card]))
+        {
+            return 0;
+        }
+
+        free(value_toml.u.s);
+    }
+
     return 1;
 }
