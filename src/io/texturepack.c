@@ -1,6 +1,6 @@
 #include "io/texturepack.h"
 
-#include "util.h"
+#include "util/util.h"
 
 #include <stdio.h>
 #include <string.h>

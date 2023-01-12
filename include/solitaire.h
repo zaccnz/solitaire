@@ -1,5 +1,15 @@
 #pragma once
 
+// https://hands.com/~lkcl/hp6915/Dump/Files/soltr.htm
+typedef enum SCORETYPE
+{
+    SCORE_MOVE = 0,
+    SCORE_TEN_SECONDS,
+    SCORE_CARD_REVEALED,
+    SCORE_FINISH_GAME,
+    SCORE_MAX,
+} ScoreType;
+
 typedef enum SUIT
 {
     CLUBS = 0,
@@ -83,11 +93,19 @@ typedef struct SolitaireConfig
 {
     int seed;
     int deal_three;
+    int timed;
 } SolitaireConfig;
 
 typedef struct Solitaire
 {
     SolitaireConfig config;
+    struct
+    {
+        int user_moves;
+        int points;
+        int cycle_stock_count;
+        float elapsed;
+    } score;
     Card *deck;
 
     Card *tableu[7][MAX_CARDS];
@@ -101,20 +119,19 @@ typedef struct Solitaire
     int move_end;
 } Solitaire;
 
-// simple to implement
 Solitaire solitaire_create(SolitaireConfig config);
-int solitaire_free(Solitaire *solitaire);
+void solitaire_free(Solitaire *solitaire);
 int solitaire_is_complete(Solitaire *solitaire);
+int solitaire_is_solvable(Solitaire *solitaire);
+int solitaire_is_trivial(Solitaire *solitaire);
 
-int solitaire_make_move(Solitaire *solitaire, Move move);
 int solitaire_can_undo(Solitaire *solitaire);
 int solitaire_can_redo(Solitaire *solitaire);
 int solitaire_undo(Solitaire *solitaire);
 int solitaire_redo(Solitaire *solitaire);
 
-// more difficult
-int solitaire_find_move(Solitaire *solitaire, MoveFrom from, int from_x, int from_y, Move *move);
 int solitaire_can_auto_complete(Solitaire *solitaire);
 int solitaire_auto_complete_move(Solitaire *solitaire);
-int solitaire_is_solvable(Solitaire *solitaire);
-int solitaire_is_trivial(Solitaire *solitaire);
+int solitaire_make_move(Solitaire *solitaire, Move move);
+int solitaire_find_move(Solitaire *solitaire, MoveFrom from, int from_x, int from_y, Move *move);
+int solitaire_score_move(Solitaire *solitaire, ScoreType type, Move *move, MoveData *data);

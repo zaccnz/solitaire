@@ -5,10 +5,10 @@
 
 #define MAX_SCENES 20
 
-Scene *scenes[MAX_SCENES];
+const Scene *scenes[MAX_SCENES];
 int scene_count = 0;
 
-void scene_push(Scene *scene)
+void scene_push(const Scene *scene)
 {
     if (scene_count >= MAX_SCENES)
     {

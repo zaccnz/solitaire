@@ -18,7 +18,7 @@ typedef struct Scene
     int popup;
 } Scene;
 
-void scene_push(Scene *scene);
+void scene_push(const Scene *scene);
 void scene_pop();
 void scene_render(struct nk_context *ctx);
 void scene_update(float delta);

@@ -14,6 +14,8 @@ a small solitaire game programmed in C using [raylib](https://www.raylib.com/)
 - [8Bit Deck Card Assets](https://drawsgood.itch.io/8bit-deck-card-assets) - DrawsGood
 - [Card Asset Pack](https://natomarcacini.itch.io/card-asset-pack) - natomarcacini
 - [Fantasy Card Game SFX Pack](https://olexmazur.itch.io/fantasy-card-game) - Olex Mazur  
+- WebKit WebCore's [UnitBezier.h](https://github.com/WebKit/WebKit/blob/main/Source/WebCore/platform/graphics/UnitBezier.h)  
+- Solitaire Scoring from [lkcl](https://hands.com/~lkcl/hp6915/Dump/Files/soltr.htm)
 
 ## build instructions
 

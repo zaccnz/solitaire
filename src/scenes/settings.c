@@ -2,7 +2,7 @@
 
 #include "io/pacman.h"
 
-#include "util.h"
+#include "util/util.h"
 
 #include <raylib.h>
 #include <raylib-nuklear.h>

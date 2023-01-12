@@ -8,29 +8,34 @@
 #define AUTO_COMPLETE_TIMEOUT 0.2f
 
 Solitaire solitaire;
-int initialized = 0;
+
 int auto_completing;
 float auto_complete_timer;
+int did_complete = 0;
+float ten_second_timer;
 
-void new_game()
+void new_game(int first)
 {
-    if (initialized)
+    if (solitaire.config.seed != 0)
     {
         solitaire_free(&solitaire);
     }
+
     solitaire = solitaire_create((SolitaireConfig){
-        .seed = 1672131473,
+        .seed = first ? 1672131473 : 0,
         .deal_three = 1,
+        .timed = first ? 1 : 0,
     });
     auto_completing = 0;
     auto_complete_timer = 0.0f;
+    did_complete = 0;
+    ten_second_timer = 0.0f;
     cards_animate_deal(&solitaire);
-    initialized = 1;
 }
 
 void start()
 {
-    new_game();
+    new_game(1);
 }
 
 void stop()
@@ -49,14 +54,20 @@ void update(float dt, int background)
         return;
     }
 
+    if (solitaire.score.user_moves > 0 && !solitaire_is_complete(&solitaire))
+    {
+        solitaire.score.elapsed += dt;
+        ten_second_timer += dt;
+        if (ten_second_timer > 10.0)
+        {
+            solitaire.score.points += solitaire_score_move(&solitaire, SCORE_TEN_SECONDS, NULL, NULL);
+            ten_second_timer -= 10.0;
+        }
+    }
+
     if (IsKeyPressed(KEY_R))
     {
-        anim_clear_all();
-        solitaire = solitaire_create((SolitaireConfig){
-            .seed = 0,
-            .deal_three = 1,
-        });
-        cards_animate_deal(&solitaire);
+        new_game(0);
     }
 
     if (IsKeyPressed(KEY_P))
@@ -96,6 +107,12 @@ void update(float dt, int background)
         }
         auto_complete_timer -= GetFrameTime();
     }
+
+    if (solitaire_is_complete(&solitaire) && did_complete == 0)
+    {
+        solitaire.score.points += solitaire_score_move(&solitaire, SCORE_FINISH_GAME, NULL, NULL);
+        did_complete = 1;
+    }
 }
 
 void render(struct nk_context *ctx)
@@ -113,6 +130,22 @@ void render(struct nk_context *ctx)
     {
         DrawText("press [c] to autocomplete", 10, 558, 16, GRAY);
     }
+
+    char text[2048];
+
+    if (solitaire.config.timed)
+    {
+        float elapsed = solitaire.score.elapsed;
+
+        snprintf(text, 2048, "Time: %d:%02d", (int)(elapsed / 60), (int)(elapsed) % 60);
+        DrawText(text, 10, 510, 16, GRAY);
+    }
+
+    snprintf(text, 2048, "Moves: %d", solitaire.score.user_moves);
+    DrawText(text, 10, 526, 16, GRAY);
+
+    snprintf(text, 2048, "Score: %d", solitaire.score.points);
+    DrawText(text, 10, 542, 16, GRAY);
 
     DrawText("controls: [r] restart [z] undo [x] redo [p] pause", 10, 574, 16, GRAY);
 }

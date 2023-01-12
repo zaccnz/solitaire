@@ -3,8 +3,10 @@
 #include "gfx/animated.h"
 #include "gfx/layout.h"
 #include "io/pacman.h"
-#include "util.h"
+#include "util/unitbezier.h"
+#include "util/util.h"
 
+#include <math.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -58,6 +60,7 @@ CardSprite cards[VALUE_MAX * SUIT_MAX];
 CardSprite *render_list[VALUE_MAX * SUIT_MAX];
 CardSprite back_sprite;
 DragAndDrop *dnd = NULL;
+UnitBezier card_move_bezier;
 int was_deal_stock = 0;
 float held = 0;
 
@@ -137,68 +140,42 @@ void card_place_with_hitbox(CardSprite *card, Card *next, float card_vertical_sp
 
 /* Animation Helpers */
 
-typedef void (*AnimationTargetFunc)(int *to_x, int *to_y);
-
 typedef struct CardAnimationData
 {
     int card;
     int from_x, from_y;
     int to_x, to_y;
     float delay;
-    float elapsed;
+    float duration;
     int zindex;
-    AnimationTargetFunc target_func;
 } CardAnimationData;
-
-void card_anim_target_mouse(int *to_x, int *to_y)
-{
-    Vector2 pos = GetMousePosition();
-    *to_x = pos.x;
-    *to_y = pos.y;
-}
 
 int card_anim_update(float progress, CardAnimationData *data)
 {
-    data->elapsed += progress;
-    if (data->elapsed < data->delay)
+    float delay_proportion = data->delay / data->duration;
+    if (progress <= delay_proportion)
     {
         return 1;
     }
+    float t = (progress - delay_proportion) / (1.0 - delay_proportion);
 
-    int to_x = data->to_x;
-    int to_y = data->to_y;
-
-    if (data->target_func)
-    {
-        data->target_func(&to_x, &to_y);
-    }
-
-    float speed = 750.0f;
     CardSprite *sprite = &cards[data->card];
-    float dx = (float)(to_x - sprite->x);
-    float dy = (float)(to_y - sprite->y);
-    // printf("anim dx,dy = %f,%f\n", dx, dy);
-    if (abs(dx) < speed * progress)
-    {
-        sprite->x = to_x;
-    }
-    else
-    {
-        sprite->fx += (dx < 0 ? -1.0f : 1.0f) * speed * progress;
-        sprite->x = (int)sprite->fx;
-    }
+    float fx = data->from_x;
+    float fy = data->from_y;
+    float tx = data->to_x;
+    float ty = data->to_y;
 
-    if (abs(dy) < speed * progress)
-    {
-        sprite->y = to_y;
-    }
-    else
-    {
-        sprite->fy += (dy < 0 ? -1.0f : 1.0f) * speed * progress;
-        sprite->y = (int)sprite->fy;
-    }
+    float ub = unit_bezier_solve(card_move_bezier, t, UNIT_BEZIER_EPSILON);
 
-    return sprite->x != to_x || sprite->y != to_y;
+    printf("update animation t %f ub %f\n", t, ub);
+
+    float x = ((1.0 - ub) * fx) + (ub * tx);
+    float y = ((1.0 - ub) * fy) + (ub * ty);
+
+    sprite->x = x;
+    sprite->y = y;
+
+    return 1;
 }
 
 int card_anim_cleanup(int completed, CardAnimationData *data)
@@ -210,11 +187,13 @@ int card_anim_cleanup(int completed, CardAnimationData *data)
     };
     sprite->flags &= ~FLAGS_ANIMATING;
     sprite->zindex = data->zindex;
+    sprite->x = data->to_x;
+    sprite->y = data->to_y;
     free(data);
 }
 
 #define UPDATE_COUNT (VALUE_MAX * SUIT_MAX)
-void cards_animate_to(Solitaire *solitaire, int card, int behind, float delay, int to_x, int to_y, AnimationTargetFunc target_func);
+void cards_animate_to(Solitaire *solitaire, int card, int behind, float delay, int to_x, int to_y);
 
 void cards_position_sprites(Solitaire *solitaire, int animate)
 {
@@ -346,7 +325,7 @@ void cards_position_sprites(Solitaire *solitaire, int animate)
         int to_y = card->y;
         card->x = animation_origins[i].x;
         card->y = animation_origins[i].y;
-        cards_animate_to(solitaire, sv_to_index(card->suit, card->value), animation_is_behind[i], animation_delays[i], to_x, to_y, NULL);
+        cards_animate_to(solitaire, sv_to_index(card->suit, card->value), animation_is_behind[i], animation_delays[i], to_x, to_y);
     }
 }
 
@@ -381,6 +360,8 @@ void cards_init()
     back_sprite.animPtr.index = -1;
     back_sprite.animPtr.generation = -1;
     back_sprite.index = -1;
+
+    card_move_bezier = unit_bezier_new(0.55, -0.15, 0.55, 1.15);
 }
 
 void cards_free()
@@ -809,9 +790,23 @@ void cards_invalidate_all()
 
 /* Animations */
 
-void cards_animate_to(Solitaire *solitaire, int card, int behind, float delay, int to_x, int to_y, AnimationTargetFunc target_func)
+#define CARD_MOVE_SPEED 750 // PIXELS/SECOND
+
+float card_animate_length(Solitaire *solitaire, CardAnimationData *data)
+{
+    int dx = data->to_x - data->from_x;
+    int dy = data->to_y - data->from_y;
+    return sqrtf(dx * dx + dy * dy) / CARD_MOVE_SPEED;
+}
+
+void cards_animate_to(Solitaire *solitaire, int card, int behind, float delay, int to_x, int to_y)
 {
     CardSprite *sprite = &cards[card];
+
+    if (sprite->x == to_x && sprite->y == to_y)
+    {
+        return;
+    }
 
     sprite->fx = (float)sprite->x;
     sprite->fy = (float)sprite->y;
@@ -823,24 +818,22 @@ void cards_animate_to(Solitaire *solitaire, int card, int behind, float delay, i
     data->to_x = to_x;
     data->to_y = to_y;
     data->delay = delay;
-    data->elapsed = 0;
-    data->target_func = target_func;
     data->zindex = sprite->zindex;
 
     sprite->zindex = sprite->zindex + (behind ? 0 : 52);
 
+    float animation_length = card_animate_length(solitaire, data);
+    data->duration = delay + animation_length;
+
     AnimationConfig config = {
         .on_update = card_anim_update,
         .on_cleanup = card_anim_cleanup,
-        .duration = 0,
+        .duration = delay + animation_length,
         .data = data,
     };
 
-    AnimationPointer pointer;
+    anim_create(config, &sprite->animPtr);
 
-    anim_create(config, &pointer);
-
-    sprite->animPtr = pointer;
     sprite->flags |= FLAGS_ANIMATING;
 }
 
@@ -867,8 +860,8 @@ void cards_animate_deal(Solitaire *solitaire)
     for (int i = 0; i < VALUE_MAX * SUIT_MAX; i++)
     {
         float delay = 0.0f;
-        delay += 0.4f - cards[i].index * 0.2f;
-        cards_animate_to(solitaire, i, 0, delay, positions[i].x, positions[i].y, NULL);
+        delay += cards[i].index * 0.2f;
+        cards_animate_to(solitaire, i, 0, delay, positions[i].x, positions[i].y);
     }
 }
 

@@ -25,9 +25,10 @@ add_executable(${PROJECT_NAME}
   src/scenes/scene.c
   src/scenes/settings.c
   src/sfx/audio.c
+  src/util/unitbezier.c
+  src/util/util.c
   src/solitaire.c 
   src/main.c 
-  src/util.c
   
   libs/tomlc99/toml.c
 )

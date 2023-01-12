@@ -33,7 +33,3 @@ void anim_clear_all();
 
 void anim_update();
 void anim_release();
-
-// helper functions
-// cubic-bezier(.55,-0.15,.55,1.15) for cards
-float anim_cubic_bezier(float progress, float x1, float y1, float x2, float y2);

@@ -2,7 +2,7 @@
 
 #include "gfx/cards.h"
 #include "sfx/audio.h"
-#include "util.h"
+#include "util/util.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -92,7 +92,7 @@ Solitaire solitaire_create(SolitaireConfig config)
     return game;
 }
 
-int solitaire_free(Solitaire *solitaire)
+void solitaire_free(Solitaire *solitaire)
 {
     for (int i = 0; i < solitaire->move_end; i++)
     {
@@ -148,6 +148,412 @@ int solitaire_push_move(Solitaire *solitaire, Move *move, MoveData *data)
     solitaire->move_end = solitaire->move_index + 1;
 
     return 1;
+}
+
+int solitaire_undo(Solitaire *solitaire)
+{
+    if (!solitaire_can_undo(solitaire))
+    {
+        return 0;
+    }
+
+    solitaire->score.user_moves++;
+
+    Move *move = solitaire->moves[solitaire->move_index - 1];
+    MoveData *data = solitaire->moves_data[solitaire->move_index - 1];
+
+    // DEPENDENCIES BEGIN
+    if (move->type == MOVE_CYCLE_STOCK && !data->return_to_stock)
+    {
+        for (int i = 0; i < data->cards_moved; i++)
+        {
+            audio_play_sfx_delay(SFX_DRAW_CARD, i * 0.2f);
+        }
+    }
+    else
+    {
+        audio_play_sfx(SFX_DRAW_CARD);
+    }
+
+    cards_animate_move(solitaire, *move, *data, 1);
+    // DEPENDENCIES END
+
+    if (move->type == MOVE_CYCLE_STOCK)
+    {
+        if (data->return_to_stock)
+        {
+            // move all cards back into talon
+            int stock_len = ntlen(solitaire->stock);
+            for (int i = 0; i < stock_len; i++)
+            {
+                solitaire->talon[i] = solitaire->stock[stock_len - 1 - i];
+                solitaire->talon[i]->shown = 1;
+                solitaire->stock[stock_len - 1 - i] = NULL;
+            }
+        }
+        else
+        {
+            // move data->cards_moved cards from talon into stock
+            int talon_len = ntlen(solitaire->talon);
+            int stock_len = ntlen(solitaire->stock);
+            for (int i = 0; i < data->cards_moved; i++)
+            {
+                int talon_index = talon_len - i - 1;
+                solitaire->stock[stock_len] = solitaire->talon[talon_index];
+                solitaire->stock[stock_len]->shown = 0;
+                solitaire->talon[talon_index] = NULL;
+                stock_len++;
+            }
+        }
+    }
+    else
+    {
+        Card **from_cards = NULL;
+        Card **to_cards = NULL;
+
+        if (move->from == MOVE_FROM_TABLEU && data->card_revealed)
+        {
+            int tableu_len = ntlen(solitaire->tableu[move->from_x]);
+            solitaire->tableu[move->from_x][tableu_len - 1]->shown = 0;
+            printf("hid card x=%d,y=%d\n", move->from_x, tableu_len - 1);
+
+            cards_animate_reveal(solitaire, move->from_x, tableu_len - 1);
+        }
+
+        switch (move->from)
+        {
+        case MOVE_FROM_FOUNDATION:
+        {
+
+            int foundation_len = ntlen(solitaire->foundations[move->from_x]);
+            from_cards = &solitaire->foundations[move->from_x][foundation_len];
+            break;
+        }
+        case MOVE_FROM_TABLEU:
+        {
+            int tableu_len = ntlen(solitaire->tableu[move->from_x]);
+            from_cards = &solitaire->tableu[move->from_x][tableu_len];
+            break;
+        }
+        case MOVE_FROM_TALON:
+        {
+            int talon_len = ntlen(solitaire->talon);
+            from_cards = &solitaire->talon[talon_len];
+            break;
+        }
+        }
+
+        switch (move->to)
+        {
+        case MOVE_TO_FOUNDATION:
+            to_cards = solitaire->foundations[move->to_x];
+            break;
+        case MOVE_TO_TABLEU:
+            to_cards = solitaire->tableu[move->to_x];
+            break;
+        }
+
+        int to_cards_len = ntlen(to_cards) - data->cards_moved;
+
+        for (int i = 0; i < data->cards_moved; i++)
+        {
+            from_cards[i] = to_cards[i + to_cards_len];
+            to_cards[i + to_cards_len] = NULL;
+        }
+    }
+
+    solitaire->move_index--;
+    return 1;
+}
+
+int solitaire_redo(Solitaire *solitaire)
+{
+    if (!solitaire_can_redo(solitaire))
+    {
+        return 0;
+    }
+
+    solitaire->score.user_moves++;
+
+    Move *move = solitaire->moves[solitaire->move_index];
+    MoveData *data = solitaire->moves_data[solitaire->move_index];
+
+    // DEPENDENCIES BEGIN
+    if (move->type == MOVE_CYCLE_STOCK && !data->return_to_stock)
+    {
+        for (int i = 0; i < data->cards_moved; i++)
+        {
+            audio_play_sfx_delay(SFX_DRAW_CARD, i * 0.2f);
+        }
+    }
+    else
+    {
+        audio_play_sfx(SFX_DRAW_CARD);
+    }
+
+    cards_animate_move(solitaire, *move, *data, 0);
+    // DEPENDENCIES END
+
+    if (move->type == MOVE_CYCLE_STOCK)
+    {
+        if (data->return_to_stock)
+        {
+            // move all cards back into stock
+            int talon_len = ntlen(solitaire->talon);
+            for (int i = 0; i < talon_len; i++)
+            {
+                solitaire->stock[i] = solitaire->talon[talon_len - 1 - i];
+                solitaire->stock[i]->shown = 0;
+                solitaire->talon[talon_len - 1 - i] = NULL;
+            }
+        }
+        else
+        {
+            // move data->cards_moved cards from stock into talon
+            int talon_len = ntlen(solitaire->talon);
+            int stock_len = ntlen(solitaire->stock);
+            for (int i = 0; i < data->cards_moved; i++)
+            {
+                int stock_index = stock_len - i - 1;
+                solitaire->talon[talon_len] = solitaire->stock[stock_index];
+                solitaire->talon[talon_len]->shown = 1;
+                solitaire->stock[stock_index] = NULL;
+                talon_len++;
+            }
+        }
+    }
+    else
+    {
+        Card **from_cards = NULL;
+        Card **to_cards = NULL;
+
+        switch (move->from)
+        {
+        case MOVE_FROM_FOUNDATION:
+        {
+            int foundation_len = ntlen(solitaire->foundations[move->from_x]);
+            from_cards = &solitaire->foundations[move->from_x][foundation_len - 1];
+            break;
+        }
+        case MOVE_FROM_TABLEU:
+        {
+
+            int tableu_len = ntlen(solitaire->tableu[move->from_x]);
+            from_cards = &solitaire->tableu[move->from_x][tableu_len - data->cards_moved];
+            break;
+        }
+        case MOVE_FROM_TALON:
+        {
+            int talon_len = ntlen(solitaire->talon);
+            from_cards = &solitaire->talon[talon_len - 1];
+            break;
+        }
+        }
+
+        switch (move->to)
+        {
+        case MOVE_TO_FOUNDATION:
+        {
+            to_cards = solitaire->foundations[move->to_x];
+            break;
+        }
+        case MOVE_TO_TABLEU:
+        {
+
+            to_cards = solitaire->tableu[move->to_x];
+            break;
+        }
+        }
+
+        int to_cards_len = ntlen(to_cards);
+
+        for (int i = 0; i < data->cards_moved; i++)
+        {
+            to_cards[i + to_cards_len] = from_cards[i];
+            from_cards[i] = NULL;
+        }
+
+        if (move->from == MOVE_FROM_TABLEU && data->card_revealed)
+        {
+            int tableu_len = ntlen(solitaire->tableu[move->from_x]);
+            solitaire->tableu[move->from_x][tableu_len - 1]->shown = 1;
+            printf("revealed card x=%d,y=%d\n", move->from_x, tableu_len - 1);
+
+            cards_animate_reveal(solitaire, move->from_x, tableu_len - 1);
+        }
+    }
+
+    solitaire->move_index++;
+    return 1;
+}
+
+int solitaire_can_undo(Solitaire *solitaire)
+{
+    return solitaire->move_index > 0;
+}
+
+int solitaire_can_redo(Solitaire *solitaire)
+{
+    return solitaire->move_index < solitaire->move_end;
+}
+
+int solitaire_can_auto_complete(Solitaire *solitaire)
+{
+    if (ntlen(solitaire->stock) > 0 || ntlen(solitaire->talon) > 1)
+    {
+        return 0;
+    }
+
+    for (int i = 0; i < 7; i++)
+    {
+        int tableu_len = ntlen(solitaire->tableu[i]);
+        for (int j = 0; j < tableu_len; j++)
+        {
+            if (!solitaire->tableu[i][j]->shown)
+            {
+                return 0;
+            }
+        }
+    }
+
+    return 1;
+}
+
+// finds a card in the talon or tableu
+// pass suit = SUIT_MAX to look for any suit
+int solitaire_find_card_for_complete(Solitaire *solitaire, Suit suit, Value value,
+                                     MoveFrom *from, int *from_x, int *from_y)
+{
+    // check tableu
+    for (int i = 0; i < 7; i++)
+    {
+        int tableu_len = ntlen(solitaire->tableu[i]);
+        if (tableu_len == 0)
+            continue;
+        Card *card = solitaire->tableu[i][tableu_len - 1];
+        if ((suit == SUIT_MAX || card->suit == suit) && card->value == value)
+        {
+            *from = MOVE_FROM_TABLEU;
+            *from_x = i;
+            *from_y = tableu_len - 1;
+            return 1;
+        }
+    }
+
+    // check talon
+    int talon_len = ntlen(solitaire->talon);
+    if (talon_len > 0)
+    {
+        Card *card = solitaire->talon[talon_len - 1];
+        if ((suit == SUIT_MAX || card->suit == suit) && card->value == value)
+        {
+            *from = MOVE_FROM_TALON;
+            *from_x = -1;
+            *from_y = -1;
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+int solitaire_auto_complete_move(Solitaire *solitaire)
+{
+    // find the pile we want to move onto
+    int lowest_foundation = -1;
+    Value lowest_foundation_value = VALUE_MAX;
+    Suit lowest_foundation_suit = SUIT_MAX;
+
+    for (int i = 0; i < SUIT_MAX; i++)
+    {
+        int foundation_len = ntlen(solitaire->foundations[i]);
+        if (foundation_len == 0)
+        {
+            lowest_foundation = i;
+            lowest_foundation_suit = SUIT_MAX;
+            lowest_foundation_value = ACE;
+            break;
+        }
+        else
+        {
+            Card *top = solitaire->foundations[i][foundation_len - 1];
+            if (top->value + 1 < lowest_foundation_value)
+            {
+                lowest_foundation = i;
+                lowest_foundation_suit = top->suit;
+                lowest_foundation_value = top->value + 1;
+            }
+        }
+    }
+
+    // find a suitable card
+    MoveFrom from;
+    int from_x;
+    int from_y;
+
+    if (!solitaire_find_card_for_complete(solitaire, lowest_foundation_suit, lowest_foundation_value, &from, &from_x, &from_y))
+    {
+        printf("auto complete failed to find card %d,%d\n", lowest_foundation_suit, lowest_foundation_value);
+        return 0;
+    }
+
+    // make the move
+    Move move = {
+        .type = MOVE_CARD,
+        .from = from,
+        .from_x = from_x,
+        .from_y = from_y,
+        .to = MOVE_TO_FOUNDATION,
+        .to_x = lowest_foundation,
+    };
+
+    solitaire_make_move(solitaire, move);
+    return 1;
+}
+
+int solitaire_find_move(Solitaire *solitaire, MoveFrom from, int from_x, int from_y, Move *move)
+{
+    MoveData *data = malloc(sizeof(MoveData));
+    memset(data, 0, sizeof(MoveData));
+
+    move->type = MOVE_CARD;
+    move->from = from;
+    move->from_x = from_x;
+    move->from_y = from_y;
+
+    for (int i = 0; i < SUIT_MAX; i++)
+    {
+        move->to = MOVE_TO_FOUNDATION;
+        move->to_x = i;
+        if (!solitaire_make_move_data(solitaire, move, data))
+        {
+            continue;
+        }
+        if (solitaire_validate_move(solitaire, move, data))
+        {
+            free(data);
+            return 1;
+        }
+    }
+
+    for (int i = 0; i < 7; i++)
+    {
+        move->to = MOVE_TO_TABLEU;
+        move->to_x = i;
+        if (!solitaire_make_move_data(solitaire, move, data))
+        {
+            continue;
+        }
+        if (solitaire_validate_move(solitaire, move, data))
+        {
+            free(data);
+            return 1;
+        }
+    }
+
+    free(data);
+
+    return 0;
 }
 
 int solitaire_validate_move(Solitaire *solitaire, Move *move, MoveData *data)
@@ -333,6 +739,13 @@ int solitaire_make_move(Solitaire *solitaire, Move move)
         return 0;
     }
 
+    int score = solitaire_score_move(solitaire, SCORE_MOVE, moveptr, data);
+    if (data->card_revealed)
+    {
+        score += solitaire_score_move(solitaire, SCORE_CARD_REVEALED, moveptr, data);
+    }
+    solitaire->score.points += score;
+
     // add this move to the end of the moves list
     if (!solitaire_push_move(solitaire, moveptr, data))
     {
@@ -343,402 +756,93 @@ int solitaire_make_move(Solitaire *solitaire, Move move)
     return solitaire_redo(solitaire);
 }
 
-int solitaire_undo(Solitaire *solitaire)
+#define POINTS_MOVE_FOUNDATION 10
+#define POINTS_MOVE_FROM_FOUNDATION -15
+#define POINTS_MOVE_TABLEU 3
+#define POINTS_MOVE_TO_TABLEU 5
+#define POINTS_CYCLE_STOCK_DRAW_3 -20
+#define COUNT_CYCLE_STOCK_DRAW_3 4
+#define POINTS_CYCLE_STOCK -100
+#define COUNT_CYCLE_STOCK 1
+#define POINTS_TEN_SECONDS -2
+#define POINTS_CARD_REVEALED 5
+#define POINTS_FINISH_GAME 10
+#define TARGET_FINISH_GAME 180
+
+int solitaire_score_move(Solitaire *solitaire, ScoreType type, Move *move, MoveData *data)
 {
-    if (!solitaire_can_undo(solitaire))
+    switch (type)
     {
+    case SCORE_TEN_SECONDS:
+    {
+        if (!solitaire->config.timed)
+        {
+            return 0;
+        }
+
+        return POINTS_TEN_SECONDS;
+    }
+    case SCORE_CARD_REVEALED:
+    {
+        return POINTS_CARD_REVEALED;
+    }
+    case SCORE_FINISH_GAME:
+    {
+        if (!solitaire->config.timed)
+        {
+            return 0;
+        }
+
+        int elapsed = (int)solitaire->score.elapsed;
+        int points = max(TARGET_FINISH_GAME - elapsed, 0);
+        return points * POINTS_FINISH_GAME;
+    }
+    case SCORE_MOVE:
+        break;
+    default:
         return 0;
     }
 
-    Move *move = solitaire->moves[solitaire->move_index - 1];
-    MoveData *data = solitaire->moves_data[solitaire->move_index - 1];
-
-    // DEPENDENCIES BEGIN
-    if (move->type == MOVE_CYCLE_STOCK && !data->return_to_stock)
+    if (!move || !data)
     {
-        for (int i = 0; i < data->cards_moved; i++)
-        {
-            audio_play_sfx_delay(SFX_DRAW_CARD, i * 0.2f);
-        }
+        printf("solitaire_score_move: SCORE_MOVE missing move or data\n");
+        return 0;
     }
-    else
-    {
-        audio_play_sfx(SFX_DRAW_CARD);
-    }
-
-    cards_animate_move(solitaire, *move, *data, 1);
-    // DEPENDENCIES END
 
     if (move->type == MOVE_CYCLE_STOCK)
     {
-        if (data->return_to_stock)
+        if (!data->return_to_stock)
         {
-            // move all cards back into talon
-            int stock_len = ntlen(solitaire->stock);
-            for (int i = 0; i < stock_len; i++)
-            {
-                solitaire->talon[i] = solitaire->stock[stock_len - 1 - i];
-                solitaire->talon[i]->shown = 1;
-                solitaire->stock[stock_len - 1 - i] = NULL;
-            }
+            return 0;
         }
-        else
+        int deal_three = solitaire->config.deal_three;
+        int required_count = deal_three ? COUNT_CYCLE_STOCK_DRAW_3 : COUNT_CYCLE_STOCK;
+        int count = solitaire->score.cycle_stock_count++;
+        if (count > required_count)
         {
-            // move data->cards_moved cards from talon into stock
-            int talon_len = ntlen(solitaire->talon);
-            int stock_len = ntlen(solitaire->stock);
-            for (int i = 0; i < data->cards_moved; i++)
-            {
-                int talon_index = talon_len - i - 1;
-                solitaire->stock[stock_len] = solitaire->talon[talon_index];
-                solitaire->stock[stock_len]->shown = 0;
-                solitaire->talon[talon_index] = NULL;
-                stock_len++;
-            }
+            return deal_three ? POINTS_CYCLE_STOCK_DRAW_3 : POINTS_CYCLE_STOCK;
         }
-    }
-    else
-    {
-        Card **from_cards = NULL;
-        Card **to_cards = NULL;
-
-        if (move->from == MOVE_FROM_TABLEU && data->card_revealed)
-        {
-            int tableu_len = ntlen(solitaire->tableu[move->from_x]);
-            solitaire->tableu[move->from_x][tableu_len - 1]->shown = 0;
-            printf("hid card x=%d,y=%d\n", move->from_x, tableu_len - 1);
-
-            cards_animate_reveal(solitaire, move->from_x, tableu_len - 1);
-        }
-
-        switch (move->from)
-        {
-        case MOVE_FROM_FOUNDATION:
-        {
-
-            int foundation_len = ntlen(solitaire->foundations[move->from_x]);
-            from_cards = &solitaire->foundations[move->from_x][foundation_len];
-            break;
-        }
-        case MOVE_FROM_TABLEU:
-        {
-            int tableu_len = ntlen(solitaire->tableu[move->from_x]);
-            from_cards = &solitaire->tableu[move->from_x][tableu_len];
-            break;
-        }
-        case MOVE_FROM_TALON:
-        {
-            int talon_len = ntlen(solitaire->talon);
-            from_cards = &solitaire->talon[talon_len];
-            break;
-        }
-        }
-
-        switch (move->to)
-        {
-        case MOVE_TO_FOUNDATION:
-            to_cards = solitaire->foundations[move->to_x];
-            break;
-        case MOVE_TO_TABLEU:
-            to_cards = solitaire->tableu[move->to_x];
-            break;
-        }
-
-        int to_cards_len = ntlen(to_cards) - data->cards_moved;
-
-        for (int i = 0; i < data->cards_moved; i++)
-        {
-            from_cards[i] = to_cards[i + to_cards_len];
-            to_cards[i + to_cards_len] = NULL;
-        }
-    }
-
-    solitaire->move_index--;
-}
-
-int solitaire_redo(Solitaire *solitaire)
-{
-    if (!solitaire_can_redo(solitaire))
-    {
         return 0;
     }
 
-    Move *move = solitaire->moves[solitaire->move_index];
-    MoveData *data = solitaire->moves_data[solitaire->move_index];
-
-    // DEPENDENCIES BEGIN
-    if (move->type == MOVE_CYCLE_STOCK && !data->return_to_stock)
+    if (move->from == MOVE_FROM_FOUNDATION)
     {
-        for (int i = 0; i < data->cards_moved; i++)
-        {
-            audio_play_sfx_delay(SFX_DRAW_CARD, i * 0.2f);
-        }
-    }
-    else
-    {
-        audio_play_sfx(SFX_DRAW_CARD);
+        return POINTS_MOVE_FROM_FOUNDATION;
     }
 
-    cards_animate_move(solitaire, *move, *data, 0);
-    // DEPENDENCIES END
-
-    if (move->type == MOVE_CYCLE_STOCK)
+    if (move->to == MOVE_TO_FOUNDATION)
     {
-        if (data->return_to_stock)
-        {
-            // move all cards back into stock
-            int talon_len = ntlen(solitaire->talon);
-            for (int i = 0; i < talon_len; i++)
-            {
-                solitaire->stock[i] = solitaire->talon[talon_len - 1 - i];
-                solitaire->stock[i]->shown = 0;
-                solitaire->talon[talon_len - 1 - i] = NULL;
-            }
-        }
-        else
-        {
-            // move data->cards_moved cards from stock into talon
-            int talon_len = ntlen(solitaire->talon);
-            int stock_len = ntlen(solitaire->stock);
-            for (int i = 0; i < data->cards_moved; i++)
-            {
-                int stock_index = stock_len - i - 1;
-                solitaire->talon[talon_len] = solitaire->stock[stock_index];
-                solitaire->talon[talon_len]->shown = 1;
-                solitaire->stock[stock_index] = NULL;
-                talon_len++;
-            }
-        }
-    }
-    else
-    {
-        Card **from_cards = NULL;
-        Card **to_cards = NULL;
-
-        switch (move->from)
-        {
-        case MOVE_FROM_FOUNDATION:
-        {
-            int foundation_len = ntlen(solitaire->foundations[move->from_x]);
-            from_cards = &solitaire->foundations[move->from_x][foundation_len - 1];
-            break;
-        }
-        case MOVE_FROM_TABLEU:
-        {
-
-            int tableu_len = ntlen(solitaire->tableu[move->from_x]);
-            from_cards = &solitaire->tableu[move->from_x][tableu_len - data->cards_moved];
-            break;
-        }
-        case MOVE_FROM_TALON:
-        {
-            int talon_len = ntlen(solitaire->talon);
-            from_cards = &solitaire->talon[talon_len - 1];
-            break;
-        }
-        }
-
-        switch (move->to)
-        {
-        case MOVE_TO_FOUNDATION:
-        {
-            to_cards = solitaire->foundations[move->to_x];
-            break;
-        }
-        case MOVE_TO_TABLEU:
-        {
-
-            to_cards = solitaire->tableu[move->to_x];
-            break;
-        }
-        }
-
-        int to_cards_len = ntlen(to_cards);
-
-        for (int i = 0; i < data->cards_moved; i++)
-        {
-            to_cards[i + to_cards_len] = from_cards[i];
-            from_cards[i] = NULL;
-        }
-
-        if (move->from == MOVE_FROM_TABLEU && data->card_revealed)
-        {
-            int tableu_len = ntlen(solitaire->tableu[move->from_x]);
-            solitaire->tableu[move->from_x][tableu_len - 1]->shown = 1;
-            printf("revealed card x=%d,y=%d\n", move->from_x, tableu_len - 1);
-
-            cards_animate_reveal(solitaire, move->from_x, tableu_len - 1);
-        }
+        return POINTS_MOVE_FOUNDATION;
     }
 
-    solitaire->move_index++;
-}
-
-int solitaire_can_undo(Solitaire *solitaire)
-{
-    return solitaire->move_index > 0;
-}
-
-int solitaire_can_redo(Solitaire *solitaire)
-{
-    return solitaire->move_index < solitaire->move_end;
-}
-
-int solitaire_find_move(Solitaire *solitaire, MoveFrom from, int from_x, int from_y, Move *move)
-{
-    MoveData *data = malloc(sizeof(MoveData));
-    memset(data, 0, sizeof(MoveData));
-
-    move->type = MOVE_CARD;
-    move->from = from;
-    move->from_x = from_x;
-    move->from_y = from_y;
-
-    for (int i = 0; i < SUIT_MAX; i++)
+    if (move->to == MOVE_TO_TABLEU)
     {
-        move->to = MOVE_TO_FOUNDATION;
-        move->to_x = i;
-        if (!solitaire_make_move_data(solitaire, move, data))
+        if (move->from == MOVE_FROM_TABLEU)
         {
-            continue;
+            return POINTS_MOVE_TABLEU;
         }
-        if (solitaire_validate_move(solitaire, move, data))
-        {
-            free(data);
-            return 1;
-        }
-    }
-
-    for (int i = 0; i < 7; i++)
-    {
-        move->to = MOVE_TO_TABLEU;
-        move->to_x = i;
-        if (!solitaire_make_move_data(solitaire, move, data))
-        {
-            continue;
-        }
-        if (solitaire_validate_move(solitaire, move, data))
-        {
-            free(data);
-            return 1;
-        }
-    }
-
-    free(data);
-
-    return 0;
-}
-
-int solitaire_can_auto_complete(Solitaire *solitaire)
-{
-    if (ntlen(solitaire->stock) > 0 || ntlen(solitaire->talon) > 1)
-    {
-        return 0;
-    }
-
-    for (int i = 0; i < 7; i++)
-    {
-        int tableu_len = ntlen(solitaire->tableu[i]);
-        for (int j = 0; j < tableu_len; j++)
-        {
-            if (!solitaire->tableu[i][j]->shown)
-            {
-                return 0;
-            }
-        }
-    }
-
-    return 1;
-}
-
-// finds a card in the talon or tableu
-// pass suit = SUIT_MAX to look for any suit
-int solitaire_find_card_for_complete(Solitaire *solitaire, Suit suit, Value value,
-                                     MoveFrom *from, int *from_x, int *from_y)
-{
-    // check tableu
-    for (int i = 0; i < 7; i++)
-    {
-        int tableu_len = ntlen(solitaire->tableu[i]);
-        if (tableu_len == 0)
-            continue;
-        Card *card = solitaire->tableu[i][tableu_len - 1];
-        if ((suit == SUIT_MAX || card->suit == suit) && card->value == value)
-        {
-            *from = MOVE_FROM_TABLEU;
-            *from_x = i;
-            *from_y = tableu_len - 1;
-            return 1;
-        }
-    }
-
-    // check talon
-    int talon_len = ntlen(solitaire->talon);
-    if (talon_len > 0)
-    {
-        Card *card = solitaire->talon[talon_len - 1];
-        if ((suit == SUIT_MAX || card->suit == suit) && card->value == value)
-        {
-            *from = MOVE_FROM_TALON;
-            *from_x = -1;
-            *from_y = -1;
-            return 1;
-        }
+        return POINTS_MOVE_TO_TABLEU;
     }
 
     return 0;
-}
-
-int solitaire_auto_complete_move(Solitaire *solitaire)
-{
-    // find the pile we want to move onto
-    int lowest_foundation = -1;
-    Value lowest_foundation_value = VALUE_MAX;
-    Suit lowest_foundation_suit = SUIT_MAX;
-
-    for (int i = 0; i < SUIT_MAX; i++)
-    {
-        int foundation_len = ntlen(solitaire->foundations[i]);
-        if (foundation_len == 0)
-        {
-            lowest_foundation = i;
-            lowest_foundation_suit = SUIT_MAX;
-            lowest_foundation_value = ACE;
-            break;
-        }
-        else
-        {
-            Card *top = solitaire->foundations[i][foundation_len - 1];
-            if (top->value + 1 < lowest_foundation_value)
-            {
-                lowest_foundation = i;
-                lowest_foundation_suit = top->suit;
-                lowest_foundation_value = top->value + 1;
-            }
-        }
-    }
-
-    // find a suitable card
-    MoveFrom from;
-    int from_x;
-    int from_y;
-
-    if (!solitaire_find_card_for_complete(solitaire, lowest_foundation_suit, lowest_foundation_value, &from, &from_x, &from_y))
-    {
-        printf("auto complete failed to find card %d,%d\n", lowest_foundation_suit, lowest_foundation_value);
-        return 0;
-    }
-
-    // make the move
-    Move move = {
-        .type = MOVE_CARD,
-        .from = from,
-        .from_x = from_x,
-        .from_y = from_y,
-        .to = MOVE_TO_FOUNDATION,
-        .to_x = lowest_foundation,
-    };
-
-    solitaire_make_move(solitaire, move);
-    return 1;
 }

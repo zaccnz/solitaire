@@ -1,7 +1,7 @@
 #include "io/textures.h"
 
 #include "io/texturepack.h"
-#include "util.h"
+#include "util/util.h"
 
 Textures *textures_find(TexturePack *pack, const char *textures_name)
 {
