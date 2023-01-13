@@ -1,6 +1,6 @@
-#include "io/textures.h"
+#include "io/tex/textures.h"
 
-#include "io/texturepack.h"
+#include "io/tex/texturepack.h"
 #include "util/util.h"
 
 Textures *textures_find(TexturePack *pack, const char *textures_name)

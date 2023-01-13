@@ -1,6 +1,6 @@
-#include "io/spritesheet.h"
+#include "io/tex/spritesheet.h"
 
-#include "io/texturepack.h"
+#include "io/tex/texturepack.h"
 
 int spritesheet_load_dimensions(Spritesheet *sheet, toml_array_t *dimensions)
 {

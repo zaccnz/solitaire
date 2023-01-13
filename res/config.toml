@@ -1,0 +1,26 @@
+animations = true
+fullscreen = false
+sfx = true
+window_size = [800, 600]
+
+[solitaire]
+dealthree = true
+timed = true
+
+[textures]
+  [textures.background]
+  pack = "internal"
+  texture_name = "Default"
+
+  [textures.backs]
+  pack = "aaaa"
+  texture_name = "Red"
+
+  [textures.cards]
+  pack = "internal"
+  texture_name = "Default"
+
+[debug]
+render_hitboxes = true
+render_animation_list = true
+seed = 0

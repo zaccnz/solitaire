@@ -1,4 +1,4 @@
-#include "gfx/animated.h"
+#include "gfx/animator.h"
 
 #include <raylib.h>
 #include <stdlib.h>
@@ -27,7 +27,7 @@ int anim_find_next_free()
     return i;
 }
 
-int anim_clear(int index, int completed)
+void anim_clear(int index, int completed)
 {
     Animation *animation = animations[index];
 
@@ -83,6 +83,7 @@ int anim_cancel(AnimationPointer animation)
     }
 
     anim_clear(i, 0);
+    return 1;
 }
 
 void anim_clear_all()

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "io/spritesheet.h"
-#include "io/textures.h"
+#include "io/tex/spritesheet.h"
+#include "io/tex/textures.h"
 #include "solitaire.h"
 
 #include <raylib.h>

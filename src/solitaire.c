@@ -1,6 +1,6 @@
 #include "solitaire.h"
 
-#include "gfx/cards.h"
+#include "gfx/animations.h"
 #include "sfx/audio.h"
 #include "util/util.h"
 
@@ -175,7 +175,7 @@ int solitaire_undo(Solitaire *solitaire)
         audio_play_sfx(SFX_DRAW_CARD);
     }
 
-    cards_animate_move(solitaire, *move, *data, 1);
+    animation_move(solitaire, *move, *data, 1);
     // DEPENDENCIES END
 
     if (move->type == MOVE_CYCLE_STOCK)
@@ -217,7 +217,7 @@ int solitaire_undo(Solitaire *solitaire)
             solitaire->tableu[move->from_x][tableu_len - 1]->shown = 0;
             printf("hid card x=%d,y=%d\n", move->from_x, tableu_len - 1);
 
-            cards_animate_reveal(solitaire, move->from_x, tableu_len - 1);
+            animation_reveal(solitaire, move->from_x, tableu_len - 1);
         }
 
         switch (move->from)
@@ -291,7 +291,7 @@ int solitaire_redo(Solitaire *solitaire)
         audio_play_sfx(SFX_DRAW_CARD);
     }
 
-    cards_animate_move(solitaire, *move, *data, 0);
+    animation_move(solitaire, *move, *data, 0);
     // DEPENDENCIES END
 
     if (move->type == MOVE_CYCLE_STOCK)
@@ -379,7 +379,7 @@ int solitaire_redo(Solitaire *solitaire)
             solitaire->tableu[move->from_x][tableu_len - 1]->shown = 1;
             printf("revealed card x=%d,y=%d\n", move->from_x, tableu_len - 1);
 
-            cards_animate_reveal(solitaire, move->from_x, tableu_len - 1);
+            animation_reveal(solitaire, move->from_x, tableu_len - 1);
         }
     }
 

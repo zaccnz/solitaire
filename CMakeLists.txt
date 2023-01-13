@@ -12,25 +12,28 @@ include_directories(${CMAKE_SOURCE_DIR}/libs/tomlc99)
 include_directories(${CMAKE_SOURCE_DIR}/libs/raylib-nuklear/include)
 
 add_executable(${PROJECT_NAME} 
-  src/gfx/animated.c
+  libs/tomlc99/toml.c
+
+  src/gfx/animations.c
+  src/gfx/animator.c
   src/gfx/cards.c
   src/gfx/layout.c
+  src/io/tex/spritesheet.c
+  src/io/tex/texturepack.c
+  src/io/tex/textures.c
   src/io/config.c
+  src/io/leaderboard.c
   src/io/pacman.c
-  src/io/spritesheet.c
-  src/io/texturepack.c
-  src/io/textures.c
-  src/scenes/game.c 
-  src/scenes/menu.c 
+  src/scenes/game.c
+  src/scenes/menu.c
   src/scenes/scene.c
   src/scenes/settings.c
   src/sfx/audio.c
+  src/util/toml_writer.c
   src/util/unitbezier.c
   src/util/util.c
-  src/solitaire.c 
-  src/main.c 
-  
-  libs/tomlc99/toml.c
+  src/solitaire.c
+  src/main.c
 )
 
 target_link_libraries(${PROJECT_NAME} raylib raylib_nuklear physfs-static)

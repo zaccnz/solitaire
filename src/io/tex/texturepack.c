@@ -1,4 +1,4 @@
-#include "io/texturepack.h"
+#include "io/tex/texturepack.h"
 
 #include "util/util.h"
 

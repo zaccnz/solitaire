@@ -1,5 +1,7 @@
-#include "gfx/animated.h"
+#include "gfx/animator.h"
 #include "gfx/cards.h"
+#include "io/config.h"
+#include "io/leaderboard.h"
 #include "io/pacman.h"
 #include "scenes/scene.h"
 #include "sfx/audio.h"
@@ -17,14 +19,20 @@
 
 int main(int argc, char **argv)
 {
+    config_load();
+    leaderboard_load();
+
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    InitWindow(800, 600, "solitaire");
+    if (config.fullscreen)
+    {
+        SetConfigFlags(FLAG_FULLSCREEN_MODE);
+    }
+
+    InitWindow(config.window_size.width, config.window_size.height, "solitaire");
 
     struct nk_context *ctx = InitNuklear(10);
 
     PHYSFS_init(argv[0]);
-
-    // load settings.toml
 
     pacman_reload_packs();
 
@@ -43,6 +51,9 @@ int main(int argc, char **argv)
 
         if (IsWindowResized())
         {
+            config.window_size.width = GetScreenWidth();
+            config.window_size.height = GetScreenHeight();
+            config_save();
             layout_resize();
         }
 
@@ -64,6 +75,9 @@ int main(int argc, char **argv)
     cards_free();
     audio_free();
     pacman_free_packs();
+
+    config_save();
+    config_free();
 
     PHYSFS_deinit();
 

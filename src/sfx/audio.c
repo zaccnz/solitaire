@@ -1,5 +1,7 @@
 #include "sfx/audio.h"
 
+#include "io/config.h"
+
 #include <raylib.h>
 
 #define SFX_QUEUE_MAX 512
@@ -84,6 +86,11 @@ void audio_update()
 
 void audio_play_sfx(SFX sound)
 {
+    if (!config.sfx)
+    {
+        return;
+    }
+
     if (sound >= SFX_MAX)
     {
         printf("invalid sfx %d\n", sound);

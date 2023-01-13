@@ -1,6 +1,6 @@
 #pragma once
 
-#include "io/texturepack.h"
+#include "io/tex/texturepack.h"
 
 typedef struct PackPointer
 {

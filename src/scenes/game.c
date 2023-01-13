@@ -1,5 +1,8 @@
 #include "scenes/scene.h"
 
+#include "gfx/animations.h"
+#include "io/config.h"
+#include "io/leaderboard.h"
 #include "solitaire.h"
 
 #include <raylib.h>
@@ -22,15 +25,20 @@ void new_game(int first)
     }
 
     solitaire = solitaire_create((SolitaireConfig){
-        .seed = first ? 1672131473 : 0,
-        .deal_three = 1,
-        .timed = first ? 1 : 0,
+        .seed = config.debug.seed,
+        .deal_three = config.solitaire.dealthree,
+        .timed = config.solitaire.timed,
     });
+
+    config.debug.seed = 0;
+    config_save();
+
     auto_completing = 0;
     auto_complete_timer = 0.0f;
     did_complete = 0;
     ten_second_timer = 0.0f;
-    cards_animate_deal(&solitaire);
+
+    animation_deal(&solitaire);
 }
 
 void start()
@@ -45,9 +53,7 @@ void stop()
 
 void update(float dt, int background)
 {
-    // todo: disable play while auto completing - cards should not need update func
-    // to render properly!!!
-    cards_update(&solitaire, background);
+    cards_update(&solitaire, background || auto_completing);
 
     if (background)
     {
@@ -111,6 +117,8 @@ void update(float dt, int background)
     if (solitaire_is_complete(&solitaire) && did_complete == 0)
     {
         solitaire.score.points += solitaire_score_move(&solitaire, SCORE_FINISH_GAME, NULL, NULL);
+        leaderboard_submit(solitaire.config.seed, solitaire.score.points,
+                           (int)solitaire.score.elapsed, solitaire.score.user_moves);
         did_complete = 1;
     }
 }
