@@ -65,6 +65,8 @@ int animation_cleanup(int completed, CardAnimationData *data)
     sprite->x = data->to_x;
     sprite->y = data->to_y;
     free(data);
+
+    return 1;
 }
 
 /* Animations */

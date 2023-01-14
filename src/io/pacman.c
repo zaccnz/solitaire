@@ -2,6 +2,7 @@
 
 #include "gfx/cards.h"
 #include "gfx/layout.h"
+#include "io/config.h"
 
 #include <physfs.h>
 #include <raylib.h>
@@ -18,6 +19,7 @@ typedef struct CurrentPack
     TexturePack *pack;
     Textures *textures;
     PackPointer pointer;
+    struct TextureConfig *config;
 } CurrentPack;
 
 CurrentPack pack_background = {0}, pack_backs = {0}, pack_cards = {0};
@@ -110,6 +112,10 @@ void pacman_reload_packs()
         }
     }
 
+    pack_background.config = &config.textures.background;
+    pack_backs.config = &config.textures.backs;
+    pack_cards.config = &config.textures.cards;
+
     ClearDirectoryFiles();
 
     if (pack_background.pack && pack_backs.pack && pack_cards.pack)
@@ -117,6 +123,36 @@ void pacman_reload_packs()
         return;
     }
 
+    // missing pack: attempt load from config
+    const TextureType TEX_TYPES[3] = {
+        TEXTURE_BACKGROUNDS,
+        TEXTURE_BACKS,
+        TEXTURE_CARDS,
+    };
+    const struct TextureConfig *STRUCTS[3] = {
+        &config.textures.background,
+        &config.textures.backs,
+        &config.textures.cards,
+    };
+
+    for (int i = 0; i < 3; i++)
+    {
+        PackPointer pointer = {
+            .type = TEX_TYPES[i],
+            .name = {0},
+            .texture_name = {0},
+        };
+        strncpy(pointer.name, STRUCTS[i]->pack, 256);
+        strncpy(pointer.texture_name, STRUCTS[i]->texture_name, 256);
+        pacman_set_current(pointer, TEX_TYPES[i]);
+    }
+
+    if (pack_background.pack && pack_backs.pack && pack_cards.pack)
+    {
+        return;
+    }
+
+    // worst case: load the first possible pack
     count = 0;
     PackPointer *ptr = pacman_list_packs(&count);
     for (int i = 0; i < count; i++)
@@ -222,6 +258,9 @@ void pacman_set_current(PackPointer pointer, TextureType as)
     target->pointer = pointer;
     target->pack = pacman_find_pack(pointer.name);
     target->textures = textures_find(target->pack, pointer.texture_name);
+
+    config_push_pack(target->config, pointer.name, pointer.texture_name);
+    config_save();
 
     if (as == TEXTURE_CARDS)
     {

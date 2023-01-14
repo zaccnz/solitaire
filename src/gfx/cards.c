@@ -2,6 +2,7 @@
 
 #include "gfx/animations.h"
 #include "gfx/layout.h"
+#include "io/config.h"
 #include "io/pacman.h"
 #include "util/util.h"
 
@@ -570,7 +571,7 @@ void cards_update(Solitaire *solitaire, int background)
     }
 }
 
-void cards_render(Solitaire *solitaire)
+void cards_render(Solitaire *solitaire, struct nk_context *ctx)
 {
     TexturePack *pack_cards = pacman_get_current(TEXTURE_CARDS);
     TexturePack *pack_backs = pacman_get_current(TEXTURE_BACKS);
@@ -591,7 +592,7 @@ void cards_render(Solitaire *solitaire)
     Vector2 origin = {0, 0};
 
     // Sort render list by zindex (insertion sort)
-    for (int i = 1; i < SUIT_MAX * VALUE_MAX; i++)
+    for (int i = 1; i < MAX_CARDS; i++)
     {
         CardSprite *ptr = render_list[i];
         int j = i - 1;
@@ -604,7 +605,7 @@ void cards_render(Solitaire *solitaire)
     }
 
     // Render
-    for (int i = 0; i < SUIT_MAX * VALUE_MAX; i++)
+    for (int i = 0; i < MAX_CARDS; i++)
     {
         CardSprite *sprite = render_list[i];
         int index = sprite->suit * VALUE_MAX + sprite->value;
@@ -620,6 +621,50 @@ void cards_render(Solitaire *solitaire)
         dest.x = sprite->x;
         dest.y = sprite->y;
         DrawTexturePro(texture, source, dest, origin, 0.0f, WHITE);
+    }
+
+    if (config.debug.render_hitboxes)
+    {
+        for (int i = 0; i < MAX_CARDS; i++)
+        {
+            CardSprite *sprite = render_list[i];
+
+            if (!(sprite->flags & FLAGS_HITBOX))
+            {
+                continue;
+            }
+
+            char buffer[256];
+            snprintf(buffer, 256, "%s %s", SUITS[sprite->suit], VALUE[sprite->value]);
+            DrawText(buffer, sprite->hitbox.x + 2, sprite->hitbox.y + sprite->hitbox.height - 14, 12, RED);
+            DrawRectangleLinesEx(sprite->hitbox, 2, BLUE);
+        }
+    }
+
+    if (config.debug.render_animation_list)
+    {
+        struct nk_rect animation_list_bounds = nk_rect(
+            config.window_size.width - 150,
+            config.window_size.height - 200,
+            140, 140);
+
+        if (nk_begin(ctx, "animation list", animation_list_bounds, NK_WINDOW_BORDER))
+        {
+            nk_layout_row_static(ctx, 30, 120, 1);
+            for (int i = 0; i < MAX_CARDS; i++)
+            {
+                CardSprite *sprite = render_list[i];
+
+                if (!(sprite->flags & FLAGS_ANIMATING))
+                {
+                    continue;
+                }
+
+                nk_labelf(ctx, NK_TEXT_LEFT, "%s %s (%.02f)", SUITS[sprite->suit],
+                          VALUE[sprite->value], anim_get_duration(sprite->animPtr));
+            }
+        }
+        nk_end(ctx);
     }
 }
 

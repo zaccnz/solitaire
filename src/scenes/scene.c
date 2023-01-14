@@ -47,6 +47,14 @@ void scene_pop()
     }
 }
 
+void scene_pop_all()
+{
+    while (scene_count > 0)
+    {
+        scene_pop();
+    }
+}
+
 void scene_render(struct nk_context *ctx)
 {
     if (scene_count == 0)

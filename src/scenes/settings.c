@@ -21,7 +21,7 @@ struct DropdownData
 
 int settings_was_opened = 0;
 
-void data_add_pointer(struct DropdownData *data, PackPointer *ptr)
+int data_add_pointer(struct DropdownData *data, PackPointer *ptr)
 {
     data->avail[data->length] = malloc(256);
     if (!strcmp(ptr->texture_name, "Default"))
@@ -32,7 +32,9 @@ void data_add_pointer(struct DropdownData *data, PackPointer *ptr)
     {
         snprintf(data->avail[data->length], 256, "%s - %s", ptr->name, ptr->texture_name);
     }
+    int index = data->length;
     data->pointers[data->length++] = ptr;
+    return index;
 }
 
 void settings_refresh_dropdown()
@@ -47,20 +49,42 @@ void settings_refresh_dropdown()
     backs_data.length = 0;
     cards_data.length = 0;
 
+    TexturePack *backgrounds_current = pacman_get_current(TEXTURE_BACKGROUNDS);
+    Textures *backgrounds_current_textures = pacman_get_current_textures(TEXTURE_BACKGROUNDS);
+    TexturePack *backs_current = pacman_get_current(TEXTURE_BACKS);
+    Textures *backs_current_textures = pacman_get_current_textures(TEXTURE_BACKS);
+    TexturePack *cards_current = pacman_get_current(TEXTURE_CARDS);
+    Textures *cards_current_textures = pacman_get_current_textures(TEXTURE_CARDS);
+
     for (int i = 0; i < min(count, 256); i++)
     {
         PackPointer *ptr = &pointers[i];
         if (ptr->type & TEXTURE_BACKGROUNDS)
         {
-            data_add_pointer(&background_data, ptr);
+            int index = data_add_pointer(&background_data, ptr);
+            if (!strcmp(backgrounds_current->name, ptr->name) &&
+                !strcmp(backgrounds_current_textures->name, ptr->texture_name))
+            {
+                background_data.last = index;
+            }
         }
         if (ptr->type & TEXTURE_BACKS)
         {
-            data_add_pointer(&backs_data, ptr);
+            int index = data_add_pointer(&backs_data, ptr);
+            if (!strcmp(backs_current->name, ptr->name) &&
+                !strcmp(backs_current_textures->name, ptr->texture_name))
+            {
+                backs_data.last = index;
+            }
         }
         if (ptr->type & TEXTURE_CARDS)
         {
-            data_add_pointer(&cards_data, ptr);
+            int index = data_add_pointer(&cards_data, ptr);
+            if (!strcmp(cards_current->name, ptr->name) &&
+                !strcmp(cards_current_textures->name, ptr->texture_name))
+            {
+                cards_data.last = index;
+            }
         }
     }
 }

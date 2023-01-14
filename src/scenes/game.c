@@ -127,7 +127,7 @@ void render(struct nk_context *ctx)
 {
     int can_auto_complete = solitaire_can_auto_complete(&solitaire);
 
-    cards_render(&solitaire);
+    cards_render(&solitaire, ctx);
 
     if (solitaire_is_complete(&solitaire))
     {

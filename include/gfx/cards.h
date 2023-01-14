@@ -7,6 +7,7 @@
 #include "solitaire.h"
 
 #include <raylib.h>
+#include <raylib-nuklear.h>
 
 typedef enum SPRITEFLAGS
 {
@@ -45,7 +46,7 @@ extern int was_deal_stock;
 void cards_init();
 void cards_free();
 void cards_update(Solitaire *solitaire, int background);
-void cards_render(Solitaire *solitaire);
+void cards_render(Solitaire *solitaire, struct nk_context *ctx);
 
 void card_place_with_hitbox(CardSprite *card, Card *next, float card_vertical_spacing);
 void cards_invalidate_all();

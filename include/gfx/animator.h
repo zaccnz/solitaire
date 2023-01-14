@@ -33,3 +33,5 @@ void anim_clear_all();
 
 void anim_update();
 void anim_release();
+
+float anim_get_duration(AnimationPointer animation);

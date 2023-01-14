@@ -8,11 +8,6 @@
 
 #include <physfs.h>
 #include <raylib.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-
-#include <rlgl.h>
 
 #define RAYLIB_NUKLEAR_IMPLEMENTATION
 #include <raylib-nuklear.h>
@@ -22,6 +17,7 @@ int main(int argc, char **argv)
     config_load();
     leaderboard_load();
 
+    SetExitKey(KEY_NULL);
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     if (config.fullscreen)
     {
@@ -36,7 +32,6 @@ int main(int argc, char **argv)
 
     pacman_reload_packs();
 
-    int pack = 0;
     audio_init();
     cards_init();
 
@@ -69,7 +64,7 @@ int main(int argc, char **argv)
         EndDrawing();
     }
 
-    scene_pop();
+    scene_pop_all();
 
     anim_release();
     cards_free();

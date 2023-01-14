@@ -1,9 +1,5 @@
 #pragma once
 
-#define CFG_DEFAULT_PACK "internal"
-#define CFG_DEFAULT_TEXTURE_NAME "Default"
-#define CFG_DEFAULT_TEXTURE_NAME_BACKS "Red"
-
 typedef struct Config
 {
     int animations;
@@ -20,7 +16,7 @@ typedef struct Config
     } solitaire;
     struct
     {
-        struct
+        struct TextureConfig
         {
             char *pack;
             char *texture_name;
@@ -39,4 +35,5 @@ extern Config config;
 void config_load();
 void config_free();
 
+void config_push_pack(struct TextureConfig *texture, char *pack, char *texture_name);
 void config_save();

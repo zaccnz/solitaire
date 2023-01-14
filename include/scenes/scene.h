@@ -20,6 +20,7 @@ typedef struct Scene
 
 void scene_push(const Scene *scene);
 void scene_pop();
+void scene_pop_all();
 void scene_render(struct nk_context *ctx);
 void scene_update(float delta);
 

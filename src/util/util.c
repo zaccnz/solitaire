@@ -1,7 +1,5 @@
 #include "util/util.h"
 
-#include "solitaire.h"
-
 #include <physfs.h>
 #include <stdlib.h>
 
@@ -15,14 +13,14 @@ int ntlen(void **array)
     return i;
 }
 
-const char *SUITS[] = {
+const char *SUITS[SUIT_MAX] = {
     "clubs",
     "hearts",
     "spades",
     "diamonds",
 };
 
-const char *VALUE[] = {
+const char *VALUE[VALUE_MAX] = {
     "A",
     "2",
     "3",

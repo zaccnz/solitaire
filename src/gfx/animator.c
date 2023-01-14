@@ -141,3 +141,20 @@ void anim_release()
         anim_clear(i, 0);
     }
 }
+
+float anim_get_duration(AnimationPointer animation)
+{
+    if (generations[animation.index] != animation.generation)
+    {
+        printf("cannot cancel animation %d: generation %d does not match %d\n",
+               animation.index, animation.generation, generations[animation.index]);
+        return 0;
+    }
+    if (!animations[animation.index])
+    {
+        printf("cannot cancel animation %d: null\n", animation.index);
+        return 0;
+    }
+
+    return animations[animation.index]->elapsed / animations[animation.index]->config.duration;
+}

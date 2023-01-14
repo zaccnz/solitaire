@@ -6,6 +6,10 @@
 #include <string.h>
 #include <toml.h>
 
+#define CFG_DEFAULT_PACK "SBS 2d Poker Pack"
+#define CFG_DEFAULT_TEXTURE_NAME "Default"
+#define CFG_DEFAULT_TEXTURE_NAME_BACKS "Red"
+
 const Config DEFAULT_CONFIG = {
     .animations = 1,
     .fullscreen = 0,
@@ -20,16 +24,16 @@ const Config DEFAULT_CONFIG = {
     },
     .textures = {
         .background = {
-            .pack = CFG_DEFAULT_PACK,
-            .texture_name = CFG_DEFAULT_TEXTURE_NAME,
+            .pack = 0,
+            .texture_name = 0,
         },
         .backs = {
-            .pack = CFG_DEFAULT_PACK,
-            .texture_name = CFG_DEFAULT_TEXTURE_NAME_BACKS,
+            .pack = 0,
+            .texture_name = 0,
         },
         .cards = {
-            .pack = CFG_DEFAULT_PACK,
-            .texture_name = CFG_DEFAULT_TEXTURE_NAME,
+            .pack = 0,
+            .texture_name = 0,
         },
     },
     .debug = {
@@ -59,14 +63,8 @@ int config_try_load_solitaire(toml_table_t *solitaire)
     config.solitaire.timed = timed.u.b;
 }
 
-struct TextureStruct
-{
-    char *pack;
-    char *texture_name;
-};
-
 int config_try_load_texture(
-    toml_table_t *texture, struct TextureStruct *texture_struct)
+    toml_table_t *texture, struct TextureConfig *texture_struct)
 {
     toml_datum_t pack = toml_string_in(texture, "pack");
     if (!pack.ok)
@@ -87,7 +85,7 @@ int config_try_load_texture(
 int config_try_load_textures(toml_table_t *textures)
 {
     const char *KEYS[3] = {"background", "backs", "cards"};
-    const struct TextureStruct *STRUCTS[3] = {
+    const struct TextureConfig *STRUCTS[3] = {
         &config.textures.background,
         &config.textures.backs,
         &config.textures.cards,
@@ -226,10 +224,15 @@ void config_load()
 {
     config = DEFAULT_CONFIG;
 
+    config_push_pack(&config.textures.background, CFG_DEFAULT_PACK, CFG_DEFAULT_TEXTURE_NAME);
+    config_push_pack(&config.textures.backs, CFG_DEFAULT_PACK, CFG_DEFAULT_TEXTURE_NAME_BACKS);
+    config_push_pack(&config.textures.cards, CFG_DEFAULT_PACK, CFG_DEFAULT_TEXTURE_NAME);
+
     FILE *fp = fopen("res/config.toml", "r");
     if (!fp)
     {
         printf("cannot open res/config.toml - %s\n", strerror(errno));
+        return;
     }
 
     char errbuf[200];
@@ -239,6 +242,7 @@ void config_load()
     if (!config_toml)
     {
         printf("cannot parse - %s\n", errbuf);
+        return;
     }
 
     config_from_toml(config_toml);
@@ -246,33 +250,48 @@ void config_load()
     toml_free(config_toml);
 }
 
-void config_free(Config *config)
+void config_free()
 {
-    if (config->textures.background.pack != CFG_DEFAULT_PACK)
+    const struct TextureConfig *STRUCTS[3] = {
+        &config.textures.background,
+        &config.textures.backs,
+        &config.textures.cards,
+    };
+
+    for (int i = 0; i < 3; i++)
     {
-        free(config->textures.background.pack);
+        struct TextureConfig *config = STRUCTS[i];
+        if (config->pack)
+        {
+            free(config->pack);
+        }
+        if (config->texture_name)
+        {
+            free(config->texture_name);
+        }
     }
-    if (config->textures.background.texture_name != CFG_DEFAULT_TEXTURE_NAME)
+}
+
+void config_push_pack(struct TextureConfig *texture, char *pack, char *texture_name)
+{
+    if (pack)
     {
-        free(config->textures.background.texture_name);
+        if (texture->pack)
+        {
+            free(texture->pack);
+        }
+        texture->pack = malloc(256);
+        strncpy(texture->pack, pack, 256);
     }
 
-    if (config->textures.backs.pack != CFG_DEFAULT_PACK)
+    if (texture_name)
     {
-        free(config->textures.backs.pack);
-    }
-    if (config->textures.backs.texture_name != CFG_DEFAULT_TEXTURE_NAME_BACKS)
-    {
-        free(config->textures.backs.texture_name);
-    }
-
-    if (config->textures.cards.pack != CFG_DEFAULT_PACK)
-    {
-        free(config->textures.cards.pack);
-    }
-    if (config->textures.cards.texture_name != CFG_DEFAULT_TEXTURE_NAME)
-    {
-        free(config->textures.cards.texture_name);
+        if (texture->texture_name)
+        {
+            free(texture->texture_name);
+        }
+        texture->texture_name = malloc(256);
+        strncpy(texture->texture_name, texture_name, 256);
     }
 }
 

@@ -62,7 +62,7 @@ void leaderboard_load_entries(toml_array_t *entries)
 {
     int entry_count = min(toml_array_nelem(entries), LEADERBOARD_ENTRY_MAX);
 
-    for (int i = 0; entry_count; i++)
+    for (int i = 0; i < entry_count; i++)
     {
         toml_table_t *table = toml_table_at(entries, i);
         if (!table)
@@ -85,6 +85,7 @@ void leaderboard_load()
     if (!fp)
     {
         printf("cannot open res/leaderboard.toml - %s\n", strerror(errno));
+        return;
     }
 
     char errbuf[200];
@@ -94,6 +95,7 @@ void leaderboard_load()
     if (!leaderboard_toml)
     {
         printf("cannot parse - %s\n", errbuf);
+        return;
     }
 
     toml_datum_t high_score = toml_int_in(leaderboard_toml, "high_score");
