@@ -78,7 +78,6 @@ void update(float dt, int background)
 
     if (IsKeyPressed(KEY_P))
     {
-        printf("pushing settings scene \n");
         scene_push(&SettingsScene);
     }
 

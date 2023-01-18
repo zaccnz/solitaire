@@ -2,6 +2,16 @@
 
 #include "solitaire.h"
 
+typedef struct CardAnimationData
+{
+    int card;
+    int from_x, from_y;
+    int to_x, to_y;
+    float delay;
+    float duration;
+    int zindex;
+} CardAnimationData;
+
 void animations_init();
 
 void animation_move_card_to(Solitaire *solitaire, int card, int behind, float delay, int to_x, int to_y);

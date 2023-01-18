@@ -9,11 +9,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-TexturePack *packs = NULL;
-int pack_count;
-
-// called cards2 becauses cards get set to NULL at some point.
-// probably by a different c file.  sorry code overlords....
 typedef struct CurrentPack
 {
     TexturePack *pack;
@@ -21,6 +16,9 @@ typedef struct CurrentPack
     PackPointer pointer;
     struct TextureConfig *config;
 } CurrentPack;
+
+TexturePack *packs = NULL;
+int pack_count;
 
 CurrentPack pack_background = {0}, pack_backs = {0}, pack_cards = {0};
 
@@ -37,6 +35,7 @@ int pacman_mount_pack(char path[2048], char *file)
 
             if (dirs[0] == NULL)
             {
+                PHYSFS_unmount(path);
                 return 0;
             }
 
@@ -107,7 +106,7 @@ void pacman_reload_packs()
 
         if (pack_count >= count)
         {
-            printf("more packs then file entries?\n");
+            printf("pacman: more packs then file entries?\n");
             break;
         }
     }
@@ -118,12 +117,21 @@ void pacman_reload_packs()
 
     ClearDirectoryFiles();
 
+    // load from current pointers
     if (pack_background.pack && pack_backs.pack && pack_cards.pack)
     {
-        return;
+        pacman_set_current(pack_background.pointer, TEXTURE_BACKGROUNDS);
+        pacman_set_current(pack_backs.pointer, TEXTURE_BACKS);
+        pacman_set_current(pack_cards.pointer, TEXTURE_CARDS);
+
+        if (pack_background.pack && pack_backs.pack && pack_cards.pack)
+        {
+            // load from current pointers success
+            return;
+        }
     }
 
-    // missing pack: attempt load from config
+    // load from config
     const TextureType TEX_TYPES[3] = {
         TEXTURE_BACKGROUNDS,
         TEXTURE_BACKS,
@@ -149,6 +157,7 @@ void pacman_reload_packs()
 
     if (pack_background.pack && pack_backs.pack && pack_cards.pack)
     {
+        // load from config success
         return;
     }
 
@@ -184,8 +193,6 @@ void pacman_free_packs()
 
 PackPointer *pacman_list_packs(int *count)
 {
-    const TextureType ALL_PACKS = TEXTURE_BACKGROUNDS | TEXTURE_BACKS | TEXTURE_CARDS;
-
     *count = 0;
     int size = pack_count * 2;
     PackPointer *results = malloc(sizeof(PackPointer) * size);
@@ -225,7 +232,7 @@ TexturePack *pacman_find_pack(char *name)
         }
     }
 
-    printf("found no such pack %s\n", name);
+    printf("pacman: found no such pack %s\n", name);
 
     return NULL;
 }

@@ -12,7 +12,7 @@ void scene_push(const Scene *scene)
 {
     if (scene_count >= MAX_SCENES)
     {
-        printf("[scene manager] failed to push new scene, scene list full\n");
+        printf("scene manager: failed to push new scene, scene list full\n");
         return;
     }
 
@@ -32,7 +32,7 @@ void scene_pop()
 {
     if (scene_count == 0)
     {
-        printf("[scene manager] failed to pop scene, scene list empty\n");
+        printf("scene manager: failed to pop scene, scene list empty\n");
     }
 
     Scene_StopFunc stop = scenes[--scene_count]->stop;

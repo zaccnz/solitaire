@@ -26,7 +26,10 @@ int main(int argc, char **argv)
 
     InitWindow(config.window_size.width, config.window_size.height, "solitaire");
 
-    struct nk_context *ctx = InitNuklear(10);
+    Font font = LoadFontEx("res/font/roboto/Roboto-Medium.ttf", 20, 0, 250);
+    struct nk_context *ctx = InitNuklearEx(font, 20);
+    ctx->style.checkbox.cursor_hover = nk_style_item_color(nk_rgb(255, 255, 255));
+    ctx->style.checkbox.cursor_normal = nk_style_item_color(nk_rgb(255, 255, 255));
 
     PHYSFS_init(argv[0]);
 
@@ -77,6 +80,7 @@ int main(int argc, char **argv)
     PHYSFS_deinit();
 
     UnloadNuklear(ctx);
+    UnloadFont(font);
 
     CloseWindow();
     return 0;

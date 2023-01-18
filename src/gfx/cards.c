@@ -38,142 +38,6 @@ int card_to_index(Card *card)
     return sv_to_index(card->suit, card->value);
 }
 
-#define UPDATE_COUNT (VALUE_MAX * SUIT_MAX)
-
-void cards_position_sprites(Solitaire *solitaire, int animate)
-{
-    TexturePack *current_pack = pacman_get_current(TEXTURE_CARDS);
-    int update_count = 0;
-    CardSprite *update_cards[UPDATE_COUNT];
-    Card *update_nexts[UPDATE_COUNT];
-    Vector2 animation_origins[UPDATE_COUNT];
-    int animation_is_behind[UPDATE_COUNT] = {0};
-    float animation_delays[UPDATE_COUNT] = {0.0f};
-
-    for (int i = 0; i < SUIT_MAX; i++)
-    {
-        int foundation_len = ntlen((void **)solitaire->foundations[i]);
-        for (int j = 0; j < foundation_len; j++)
-        {
-            Card *card = solitaire->foundations[i][j];
-            CardSprite *sprite = &cards[card_to_index(card)];
-            if (!(sprite->flags & FLAGS_INVALIDATED))
-            {
-                continue;
-            }
-            update_cards[update_count] = sprite;
-            update_nexts[update_count] = solitaire->foundations[i][j + 1];
-            animation_origins[update_count].x = sprite->x;
-            animation_origins[update_count].y = sprite->y;
-            update_count++;
-
-            sprite->flags = FLAGS_FOUNDATION;
-            if (card->shown)
-            {
-                sprite->flags |= FLAGS_REVEALED;
-            }
-            sprite->index = j;
-            sprite->pile = i;
-            sprite->zindex = j;
-        }
-    }
-    for (int i = 0; i < 7; i++)
-    {
-        int tableu_len = ntlen((void **)solitaire->tableu[i]);
-        for (int j = 0; j < tableu_len; j++)
-        {
-            Card *card = solitaire->tableu[i][j];
-            CardSprite *sprite = &cards[card_to_index(card)];
-            if (!(sprite->flags & FLAGS_INVALIDATED))
-            {
-                continue;
-            }
-            update_cards[update_count] = sprite;
-            update_nexts[update_count] = solitaire->tableu[i][j + 1];
-            animation_origins[update_count].x = sprite->x;
-            animation_origins[update_count].y = sprite->y;
-            update_count++;
-
-            sprite->flags = FLAGS_TABLEU;
-            if (card->shown)
-            {
-                sprite->flags |= FLAGS_REVEALED;
-            }
-            sprite->index = j;
-            sprite->pile = i;
-            sprite->zindex = j;
-        }
-    }
-    int talon_len = ntlen((void **)solitaire->talon);
-    for (int i = 0; i < talon_len; i++)
-    {
-        Card *card = solitaire->talon[i];
-        CardSprite *sprite = &cards[card_to_index(card)];
-        if (!(sprite->flags & FLAGS_INVALIDATED))
-        {
-            continue;
-        }
-        update_cards[update_count] = sprite;
-        update_nexts[update_count] = solitaire->talon[i + 1];
-        animation_origins[update_count].x = sprite->x;
-        animation_origins[update_count].y = sprite->y;
-        animation_is_behind[update_count] = talon_len - i > 3;
-        if (!animation_is_behind[update_count] && was_deal_stock)
-        {
-            animation_delays[update_count] = 0.4f - min(talon_len - i - 1, 3) * 0.2f;
-        }
-        update_count++;
-
-        sprite->flags = FLAGS_TALON | FLAGS_REVEALED;
-        sprite->index = max(-1, min(talon_len - i, 3));
-        sprite->pile = -1;
-        sprite->zindex = i;
-    }
-    int stock_len = ntlen((void **)solitaire->stock);
-    for (int i = 0; i < stock_len; i++)
-    {
-        Card *card = solitaire->stock[i];
-        CardSprite *sprite = &cards[card_to_index(card)];
-        if (!(sprite->flags & FLAGS_INVALIDATED))
-        {
-            continue;
-        }
-        update_cards[update_count] = sprite;
-        update_nexts[update_count] = solitaire->stock[i + 1];
-        animation_origins[update_count].x = sprite->x;
-        animation_origins[update_count].y = sprite->y;
-        update_count++;
-
-        sprite->flags = FLAGS_STOCK;
-        sprite->index = -1;
-        sprite->pile = -1;
-        sprite->zindex = i;
-    }
-
-    was_deal_stock = 0;
-
-    for (int i = 0; i < update_count; i++)
-    {
-        update_cards[i]->flags &= ~FLAGS_INVALIDATED;
-        card_place_with_hitbox(update_cards[i], update_nexts[i], current_pack->card_vertical_spacing);
-    }
-
-    if (!animate)
-    {
-        return;
-    }
-
-    for (int i = 0; i < update_count; i++)
-    {
-        CardSprite *card = update_cards[i];
-        int to_x = card->x;
-        int to_y = card->y;
-        card->x = animation_origins[i].x;
-        card->y = animation_origins[i].y;
-        animation_move_card_to(solitaire, sv_to_index(card->suit, card->value), animation_is_behind[i], animation_delays[i], to_x, to_y);
-    }
-}
-
 void cards_init()
 {
     // setup cards as invisible
@@ -211,7 +75,7 @@ void cards_init()
 
 void cards_free()
 {
-    for (int i = 0; i < SUIT_MAX * VALUE_MAX; i++)
+    for (int i = 0; i < MAX_CARDS; i++)
     {
         CardSprite *sprite = cards + i;
         if (sprite->animPtr.index >= 0)
@@ -223,7 +87,7 @@ void cards_free()
 
 int card_check_hit(Vector2 pos, SpriteFlags flags_mask)
 {
-    for (int i = 0; i < SUIT_MAX * VALUE_MAX; i++)
+    for (int i = 0; i < MAX_CARDS; i++)
     {
         if (!(flags_mask & cards[i].flags))
         {
@@ -668,7 +532,164 @@ void cards_render(Solitaire *solitaire, struct nk_context *ctx)
     }
 }
 
-void card_place_with_hitbox(CardSprite *card, Card *next, float card_vertical_spacing)
+void cards_position_sprites(Solitaire *solitaire, int animate)
+{
+    TexturePack *current_pack = pacman_get_current(TEXTURE_CARDS);
+    int update_count = 0;
+    CardSprite *update_cards[MAX_CARDS];
+    Card *update_nexts[MAX_CARDS];
+    Vector2 animation_origins[MAX_CARDS];
+    int animation_is_behind[MAX_CARDS] = {0};
+    float animation_delays[MAX_CARDS] = {0.0f};
+
+    for (int i = 0; i < SUIT_MAX; i++)
+    {
+        int foundation_len = ntlen((void **)solitaire->foundations[i]);
+        for (int j = 0; j < foundation_len; j++)
+        {
+            Card *card = solitaire->foundations[i][j];
+            CardSprite *sprite = &cards[card_to_index(card)];
+            if (!(sprite->flags & FLAGS_INVALIDATED))
+            {
+                continue;
+            }
+            update_cards[update_count] = sprite;
+            update_nexts[update_count] = solitaire->foundations[i][j + 1];
+            animation_origins[update_count].x = sprite->x;
+            animation_origins[update_count].y = sprite->y;
+            update_count++;
+
+            sprite->flags &= ~FLAGS_POSITIONS;
+            sprite->flags |= FLAGS_FOUNDATION;
+            if (card->shown)
+            {
+                sprite->flags |= FLAGS_REVEALED;
+            }
+            else
+            {
+                sprite->flags &= ~FLAGS_REVEALED;
+            }
+            sprite->index = j;
+            sprite->pile = i;
+            sprite->zindex = j;
+        }
+    }
+    for (int i = 0; i < 7; i++)
+    {
+        int tableu_len = ntlen((void **)solitaire->tableu[i]);
+        for (int j = 0; j < tableu_len; j++)
+        {
+            Card *card = solitaire->tableu[i][j];
+            CardSprite *sprite = &cards[card_to_index(card)];
+            if (!(sprite->flags & FLAGS_INVALIDATED))
+            {
+                continue;
+            }
+            update_cards[update_count] = sprite;
+            update_nexts[update_count] = solitaire->tableu[i][j + 1];
+            animation_origins[update_count].x = sprite->x;
+            animation_origins[update_count].y = sprite->y;
+            update_count++;
+
+            sprite->flags &= ~FLAGS_POSITIONS;
+            sprite->flags |= FLAGS_TABLEU;
+            if (card->shown)
+            {
+                sprite->flags |= FLAGS_REVEALED;
+            }
+            else
+            {
+                sprite->flags &= ~FLAGS_REVEALED;
+            }
+            sprite->index = j;
+            sprite->pile = i;
+            sprite->zindex = j;
+        }
+    }
+    int talon_len = ntlen((void **)solitaire->talon);
+    for (int i = 0; i < talon_len; i++)
+    {
+        Card *card = solitaire->talon[i];
+        CardSprite *sprite = &cards[card_to_index(card)];
+        if (!(sprite->flags & FLAGS_INVALIDATED))
+        {
+            continue;
+        }
+        update_cards[update_count] = sprite;
+        update_nexts[update_count] = solitaire->talon[i + 1];
+        animation_origins[update_count].x = sprite->x;
+        animation_origins[update_count].y = sprite->y;
+        animation_is_behind[update_count] = talon_len - i > 3;
+        if (!animation_is_behind[update_count] && was_deal_stock)
+        {
+            animation_delays[update_count] = 0.4f - min(talon_len - i - 1, 3) * 0.2f;
+        }
+        update_count++;
+
+        sprite->flags &= ~FLAGS_POSITIONS;
+        sprite->flags |= FLAGS_TALON | FLAGS_REVEALED;
+        sprite->index = max(-1, min(talon_len - i, 3));
+        sprite->pile = -1;
+        sprite->zindex = i;
+    }
+    int stock_len = ntlen((void **)solitaire->stock);
+    for (int i = 0; i < stock_len; i++)
+    {
+        Card *card = solitaire->stock[i];
+        CardSprite *sprite = &cards[card_to_index(card)];
+        if (!(sprite->flags & FLAGS_INVALIDATED))
+        {
+            continue;
+        }
+        update_cards[update_count] = sprite;
+        update_nexts[update_count] = solitaire->stock[i + 1];
+        animation_origins[update_count].x = sprite->x;
+        animation_origins[update_count].y = sprite->y;
+        update_count++;
+
+        sprite->flags &= ~FLAGS_POSITIONS;
+        sprite->flags &= ~FLAGS_REVEALED;
+        sprite->flags |= FLAGS_STOCK;
+        sprite->index = -1;
+        sprite->pile = -1;
+        sprite->zindex = i;
+    }
+
+    was_deal_stock = 0;
+
+    for (int i = 0; i < update_count; i++)
+    {
+        update_cards[i]->flags &= ~FLAGS_INVALIDATED;
+        cards_place_with_hitbox(update_cards[i], update_nexts[i], current_pack->card_vertical_spacing);
+    }
+
+    if (!animate)
+    {
+        return;
+    }
+
+    for (int i = 0; i < update_count; i++)
+    {
+        CardSprite *card = update_cards[i];
+
+        int to_x = card->x;
+        int to_y = card->y;
+
+        if (card->flags & FLAGS_ANIMATING)
+        {
+            printf("sprite %s %s animation cancelled (%.00f,%.00f) to (%d,%d)\n",
+                   SUITS[card->suit], VALUE[card->value], animation_origins[i].x,
+                   animation_origins[i].y, card->x, card->y);
+            anim_cancel(card->animPtr);
+        }
+
+        card->x = animation_origins[i].x;
+        card->y = animation_origins[i].y;
+        animation_move_card_to(solitaire, sv_to_index(card->suit, card->value), animation_is_behind[i], animation_delays[i], to_x, to_y);
+    }
+}
+
+void cards_place_with_hitbox(CardSprite *card, Card *next, float card_vertical_spacing)
 {
     CalcOut out;
     LayoutPosition pos = LAYOUT_NONE;
@@ -711,11 +732,8 @@ void card_place_with_hitbox(CardSprite *card, Card *next, float card_vertical_sp
 
     layout_calculate(pos, data, &out);
 
-    if (!(card->flags & FLAGS_ANIMATING))
-    {
-        card->x = out.x;
-        card->y = out.y;
-    }
+    card->x = out.x;
+    card->y = out.y;
 
     if (hitbox)
     {
@@ -733,7 +751,7 @@ void card_place_with_hitbox(CardSprite *card, Card *next, float card_vertical_sp
 
 void cards_invalidate_all()
 {
-    for (int i = 0; i < SUIT_MAX * VALUE_MAX; i++)
+    for (int i = 0; i < MAX_CARDS; i++)
     {
         CardSprite *sprite = &cards[i];
         sprite->flags |= FLAGS_INVALIDATED;

@@ -11,21 +11,21 @@ int pack_load_metadata(TexturePack *pack, toml_table_t *meta)
     toml_datum_t name = toml_string_in(meta, "name");
     if (!name.ok)
     {
-        printf("cannot read meta.name\n");
+        printf("pack: cannot read meta.name\n");
         return 0;
     }
 
     toml_datum_t author = toml_string_in(meta, "author");
     if (!author.ok)
     {
-        printf("cannot read meta.author\n");
+        printf("pack: cannot read meta.author\n");
         return 0;
     }
 
     toml_datum_t card_vertical_spacing = toml_double_in(meta, "card_vertical_spacing");
     if (!card_vertical_spacing.ok)
     {
-        printf("cannot read meta.card_vertical_spacing\n");
+        printf("pack: cannot read meta.card_vertical_spacing\n");
         return 0;
     }
 
@@ -70,7 +70,7 @@ int pack_load_backgrounds(TexturePack *pack, toml_array_t *backgrounds)
         }
         textures->type |= TEXTURE_BACKGROUNDS;
 
-        texture_from_path(pack->path, texture.u.s, &textures->background);
+        texture_from_path(texture.u.s, &textures->background);
         free(texture.u.s);
     }
     return 1;
@@ -203,7 +203,9 @@ int pack_load_suit_or_values(TexturePack *pack, toml_table_t *card, Suit suit, V
 
         if (!textures_from_directory(textures, path.u.s, suit, value, files))
         {
-            printf("at %s\n", toml_table_key(card));
+            printf("in pack %s\n", toml_table_key(card));
+            free(path.u.s);
+            return 0;
         }
 
         free(path.u.s);
@@ -374,8 +376,11 @@ int pack_load(const char *path, TexturePack *pack)
     pack->path = malloc(path_len * sizeof(char));
     snprintf(pack->path, path_len, "%s", path);
 
+    pack->spritesheets = NULL;
     pack->spritesheets_count = 0;
-    pack->texture_count = 0;
+    pack->textures = NULL;
+    pack->textures_count = 0;
+    pack->textures_size = 0;
 
     char errbuf[200];
 
@@ -383,7 +388,7 @@ int pack_load(const char *path, TexturePack *pack)
 
     if (!contents)
     {
-        printf("failed to read file %s\n", path);
+        printf("pack: failed to read file %s\n", path);
         return 0;
     }
 
@@ -393,7 +398,7 @@ int pack_load(const char *path, TexturePack *pack)
 
     if (!pack_toml)
     {
-        printf("cannot parse - %s\n", errbuf);
+        printf("pack: cannot parse - %s\n", errbuf);
         return 0;
     }
 
@@ -437,8 +442,8 @@ int pack_load(const char *path, TexturePack *pack)
 
     printf("==== %s ====\n", pack->path);
     printf("Texture Pack %s (%s) Loaded\n", pack->name, pack->author);
-    printf("  %d textures\n", pack->texture_count);
-    for (int i = 0; i < pack->texture_count; i++)
+    printf("  %d textures\n", pack->textures_count);
+    for (int i = 0; i < pack->textures_count; i++)
     {
         Textures *textures = pack->textures[i];
         printf("  %s %s (background %d, backs %d, cards %d)\n", pack->name, textures->name,
@@ -464,38 +469,22 @@ int pack_free(TexturePack *pack)
         spritesheet_free(&pack->spritesheets[i]);
     }
 
-    for (int i = 0; i < pack->texture_count; i++)
+    for (int i = 0; i < pack->textures_count; i++)
     {
-        Textures *textures = pack->textures[i];
-        switch (textures->type)
-        {
-        case TEXTURE_BACKGROUNDS:
-        {
-            UnloadTexture(textures->background);
-            break;
-        }
-        case TEXTURE_BACKS:
-        {
-            UnloadTexture(textures->card_back);
-            break;
-        }
-        case TEXTURE_CARDS:
-        {
-            for (int i = 0; i < MAX_CARDS; i++)
-            {
-                UnloadTexture(textures->cards[i]);
-            }
-        }
-        }
-        free(textures->name);
-        free(textures);
+        textures_free(pack->textures[i]);
     }
 
     free(pack->name);
     free(pack->author);
     free(pack->path);
-    free(pack->spritesheets);
-    free(pack->textures);
+    if (pack->spritesheets)
+    {
+        free(pack->spritesheets);
+    }
+    if (pack->textures)
+    {
+        free(pack->textures);
+    }
 
     return 0;
 }
@@ -515,11 +504,11 @@ Spritesheet *pack_get_spritesheet(TexturePack *pack, const char *spritesheet)
 
 char **pack_get_texture_names(TexturePack *pack, int *count)
 {
-    char **names = malloc(sizeof(char *) * pack->texture_count);
-    for (int i = 0; i < pack->texture_count; i++)
+    char **names = malloc(sizeof(char *) * pack->textures_count);
+    for (int i = 0; i < pack->textures_count; i++)
     {
         names[i] = pack->textures[i]->name;
     }
-    *count = pack->texture_count;
+    *count = pack->textures_count;
     return names;
 }

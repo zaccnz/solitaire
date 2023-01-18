@@ -99,7 +99,7 @@ int key_get_index(const char *key)
     char *chr = strchr(key, '_');
     if (!chr)
     {
-        printf("%s is not a valid card\n", key);
+        printf("key_get_index: %s is not a valid card\n", key);
         return -1;
     }
     int split = chr - key;
@@ -107,7 +107,7 @@ int key_get_index(const char *key)
 
     if (split == 0 || split >= 31 || len - split >= 31 || len - split == 0)
     {
-        printf("%s is not a valid card\n", key);
+        printf("key_get_index: %s is not a valid card\n", key);
         return -1;
     }
 
@@ -121,13 +121,13 @@ int key_get_index(const char *key)
 
     if (suit == SUIT_MAX)
     {
-        printf("%s is not a valid suit\n", suit_str);
+        printf("key_get_index: %s is not a valid suit\n", suit_str);
         return -1;
     }
 
     if (value == VALUE_MAX)
     {
-        printf("%s is not a valid value\n", value_str);
+        printf("key_get_index: %s is not a valid value\n", value_str);
         return -1;
     }
 
@@ -139,7 +139,8 @@ char *physfs_read_to_mem(const char *path, int *size)
     PHYSFS_File *file = PHYSFS_openRead(path);
     if (!file)
     {
-        printf("failed to open file %s for reading: %s\n", PHYSFS_getLastError(), path);
+        printf("physfs_read_to_mem: failed to open file %s for reading: %s\n", path,
+               PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
         return NULL;
     }
 
@@ -159,11 +160,12 @@ char *physfs_read_to_mem(const char *path, int *size)
 
     if (!contents)
     {
-        printf("failed to allocate space (%d bytes) for file %s\n", *size, path);
+        printf("physfs_read_to_mem: failed to allocate space (%d bytes) for file %s\n", *size, path);
         return NULL;
     }
 
     PHYSFS_readBytes(file, contents, size ? *size : len);
+    PHYSFS_close(file);
 
     return contents;
 }

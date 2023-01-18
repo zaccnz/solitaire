@@ -3,10 +3,17 @@
 #include "io/tex/texturepack.h"
 #include "util/util.h"
 
+#include <stdlib.h>
+#include <string.h>
+
 Textures *textures_find(TexturePack *pack, const char *textures_name)
 {
+    if (!pack->textures)
+    {
+        return NULL;
+    }
 
-    for (int i = 0; i < pack->texture_count; i++)
+    for (int i = 0; i < pack->textures_count; i++)
     {
         if (!strcmp(textures_name, pack->textures[i]->name))
         {
@@ -17,11 +24,11 @@ Textures *textures_find(TexturePack *pack, const char *textures_name)
     return NULL;
 }
 
-Textures *textures_find_or_create(TexturePack *pack, const char *textures_name, int *create)
+Textures *textures_find_or_create(TexturePack *pack, const char *textures_name, int *created)
 {
-    if (create)
+    if (created)
     {
-        *create = 0;
+        *created = 0;
     }
 
     Textures *textures = textures_find(pack, textures_name);
@@ -31,16 +38,30 @@ Textures *textures_find_or_create(TexturePack *pack, const char *textures_name, 
         return textures;
     }
 
+    if (!pack->textures)
+    {
+        pack->textures = malloc(sizeof(Textures *) * 3);
+        memset(pack->textures, 0, sizeof(Textures *) * 3);
+        pack->textures_size = 3;
+    }
+    else if (pack->textures_count >= pack->textures_size)
+    {
+        int new_size = pack->textures_size * 2;
+        pack->textures = realloc(pack->textures, sizeof(Textures *) * new_size);
+        memset(pack->textures + pack->textures_size, 0, sizeof(Textures *) * pack->textures_size);
+        pack->textures_size = new_size;
+    }
+
     textures = malloc(sizeof(Textures));
     memset(textures, 0, sizeof(Textures));
     textures->name = textures_name;
 
-    pack->textures[pack->texture_count] = textures;
-    pack->texture_count++;
+    pack->textures[pack->textures_count] = textures;
+    pack->textures_count++;
 
-    if (textures && create)
+    if (textures && created)
     {
-        *create = 1;
+        *created = 1;
     }
 
     return textures;
@@ -49,7 +70,7 @@ Textures *textures_find_or_create(TexturePack *pack, const char *textures_name, 
 int textures_fill_with_default(TexturePack *pack)
 {
     Textures *default_textures = NULL;
-    for (int i = 0; i < pack->texture_count; i++)
+    for (int i = 0; i < pack->textures_count; i++)
     {
         if (!strcmp(pack->textures[i]->name, "Default"))
         {
@@ -59,19 +80,19 @@ int textures_fill_with_default(TexturePack *pack)
     }
     if (default_textures == NULL)
     {
-        printf("pack missing default textures\n");
+        printf("textures: pack missing default textures\n");
         return 0;
     }
     for (int i = 0; i < MAX_CARDS; i++)
     {
         if (default_textures->cards[i].id <= 0)
         {
-            printf("pack missing default texture for face card %d\n", i);
+            printf("textures: pack missing default texture for face card %d\n", i);
             return 0;
         }
     }
 
-    for (int i = 0; i < pack->texture_count; i++)
+    for (int i = 0; i < pack->textures_count; i++)
     {
         if (!strcmp(pack->textures[i]->name, "Default"))
         {
@@ -94,6 +115,28 @@ int textures_fill_with_default(TexturePack *pack)
     return 1;
 }
 
+void textures_free(Textures *textures)
+{
+    if (textures->type & TEXTURE_BACKGROUNDS)
+    {
+        UnloadTexture(textures->background);
+    }
+    if (textures->type & TEXTURE_BACKS)
+    {
+        UnloadTexture(textures->card_back);
+    }
+    if (textures->type & TEXTURE_CARDS)
+    {
+        for (int i = 0; i < MAX_CARDS; i++)
+        {
+            UnloadTexture(textures->cards[i]);
+        }
+    }
+
+    free(textures->name);
+    free(textures);
+}
+
 int texture_from_path(char *path, Texture *out)
 {
     int size = 0;
@@ -108,7 +151,7 @@ int texture_from_path(char *path, Texture *out)
     UnloadImage(image);
     if (out->id <= 0)
     {
-        printf("texture %s invalid\n", path);
+        printf("textures: texture %s failed to load\n", path);
         return 0;
     }
     return 1;
@@ -123,7 +166,7 @@ int textures_from_directory(Textures *textures, char *path, Suit suit, Value val
         toml_datum_t value_toml = toml_string_at(files, i);
         if (!value_toml.ok)
         {
-            printf("failed to read files: %d is not a string\n", i);
+            printf("textures: failed to read files: %d is not a string\n", i);
             return 0;
         }
 

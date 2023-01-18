@@ -22,14 +22,14 @@ typedef enum SPRITEFLAGS
     FLAGS_INVALIDATED = 1 << 7,
 } SpriteFlags;
 
+#define FLAGS_POSITIONS (FLAGS_FOUNDATION | FLAGS_TABLEU | FLAGS_TALON | FLAGS_STOCK)
+
 typedef struct CardSprite
 {
     /* gfx */
     int x, y;
     int zindex;
     Rectangle hitbox;
-
-    /* animation */
     AnimationPointer animPtr;
 
     /* data */
@@ -48,9 +48,6 @@ void cards_free();
 void cards_update(Solitaire *solitaire, int background);
 void cards_render(Solitaire *solitaire, struct nk_context *ctx);
 
-void card_place_with_hitbox(CardSprite *card, Card *next, float card_vertical_spacing);
+void cards_position_sprites(Solitaire *solitaire, int animate);
+void cards_place_with_hitbox(CardSprite *card, Card *next, float card_vertical_spacing);
 void cards_invalidate_all();
-
-void cards_animate_deal(Solitaire *solitaire);
-void cards_animate_move(Solitaire *solitaire, Move move, MoveData data, int undo);
-void cards_animate_reveal(Solitaire *solitaire, int tableu_x, int tableu_y);

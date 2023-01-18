@@ -6,8 +6,6 @@
 
 #include <raylib.h>
 
-#define MAX_TEXTURES 50
-
 typedef struct TexturePack
 {
     char *name;
@@ -16,8 +14,9 @@ typedef struct TexturePack
     float card_vertical_spacing;
     Spritesheet *spritesheets;
     int spritesheets_count;
-    Textures *textures[MAX_TEXTURES];
-    int texture_count;
+    Textures **textures;
+    int textures_count;
+    int textures_size;
 } TexturePack;
 
 int pack_load(const char *path, TexturePack *pack);

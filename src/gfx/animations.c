@@ -16,17 +16,6 @@ void animations_init()
 }
 
 /* Animation Helpers */
-
-typedef struct CardAnimationData
-{
-    int card;
-    int from_x, from_y;
-    int to_x, to_y;
-    float delay;
-    float duration;
-    int zindex;
-} CardAnimationData;
-
 int animation_update(float progress, CardAnimationData *data)
 {
     float delay_proportion = data->delay / data->duration;
@@ -391,13 +380,13 @@ void animation_reveal(Solitaire *solitaire, int tableu_x, int tableu_y)
     if (card->shown)
     {
         sprite->flags |= FLAGS_REVEALED;
-        card_place_with_hitbox(sprite, NULL, 0.0);
+        cards_place_with_hitbox(sprite, NULL, 0.0);
         // start animation to show
     }
     else
     {
         sprite->flags &= ~FLAGS_REVEALED;
-        card_place_with_hitbox(sprite, solitaire->tableu[tableu_x][tableu_y + 1], 0.0);
+        cards_place_with_hitbox(sprite, solitaire->tableu[tableu_x][tableu_y + 1], 0.0);
         // start animation to hide
     }
 }

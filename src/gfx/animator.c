@@ -10,6 +10,23 @@
 Animation *animations[ANIMATION_MAX] = {NULL};
 int generations[ANIMATION_MAX] = {0};
 
+int anim_find(AnimationPointer animation)
+{
+    if (generations[animation.index] != animation.generation)
+    {
+        printf("cannot cancel animation %d: generation %d does not match %d\n",
+               animation.index, animation.generation, generations[animation.index]);
+        return -1;
+    }
+    if (!animations[animation.index])
+    {
+        printf("cannot cancel animation %d: null\n", animation.index);
+        return -1;
+    }
+
+    return animation.index;
+}
+
 int anim_find_next_free()
 {
     int i = 0;
@@ -69,20 +86,13 @@ int anim_create(AnimationConfig config, AnimationPointer *ptr)
 
 int anim_cancel(AnimationPointer animation)
 {
-    int i = animation.index;
-    if (generations[i] != animation.generation)
+    int index = anim_find(animation);
+    if (index < 0)
     {
-        printf("cannot cancel animation %d: generation %d does not match %d\n",
-               i, animation.generation, generations[i]);
-        return 0;
-    }
-    if (!animations[i])
-    {
-        printf("cannot cancel animation %d: null\n", i);
         return 0;
     }
 
-    anim_clear(i, 0);
+    anim_clear(index, 0);
     return 1;
 }
 
@@ -142,19 +152,24 @@ void anim_release()
     }
 }
 
-float anim_get_duration(AnimationPointer animation)
+void *anim_get_data(AnimationPointer animation)
 {
-    if (generations[animation.index] != animation.generation)
+    int index = anim_find(animation);
+    if (index < 0)
     {
-        printf("cannot cancel animation %d: generation %d does not match %d\n",
-               animation.index, animation.generation, generations[animation.index]);
-        return 0;
-    }
-    if (!animations[animation.index])
-    {
-        printf("cannot cancel animation %d: null\n", animation.index);
-        return 0;
+        return NULL;
     }
 
-    return animations[animation.index]->elapsed / animations[animation.index]->config.duration;
+    return animations[index]->config.data;
+}
+
+float anim_get_duration(AnimationPointer animation)
+{
+    int index = anim_find(animation);
+    if (index < 0)
+    {
+        return 0.0f;
+    }
+
+    return animations[index]->elapsed / animations[index]->config.duration;
 }

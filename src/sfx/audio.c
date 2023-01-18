@@ -50,7 +50,7 @@ void audio_init()
     {
         if (!sfx_loaded[i])
         {
-            printf("missing config for SFX %d\n", i);
+            printf("audio: missing config for SFX %d\n", i);
         }
     }
 }
@@ -93,15 +93,14 @@ void audio_play_sfx(SFX sound)
 
     if (sound >= SFX_MAX)
     {
-        printf("invalid sfx %d\n", sound);
+        printf("audio: invalid sfx %d\n", sound);
         return;
     }
     if (!sfx_loaded[sound])
     {
-        printf("playing unloaded sound %d\n", sound);
+        printf("audio: playing unloaded sound %d\n", sound);
         return;
     }
-    printf("play sound\n");
     PlaySound(sfx[sound]);
 }
 

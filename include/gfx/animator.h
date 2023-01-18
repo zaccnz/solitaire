@@ -31,7 +31,9 @@ int anim_cancel(AnimationPointer animation);
 
 void anim_clear_all();
 
+// TODO: anim render? create animations of custom sprites, self contained
 void anim_update();
 void anim_release();
 
+void *anim_get_data(AnimationPointer animation);
 float anim_get_duration(AnimationPointer animation);
