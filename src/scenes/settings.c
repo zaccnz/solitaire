@@ -1,6 +1,7 @@
 #include "scenes/scene.h"
 
 #include "io/config.h"
+#include "io/licences.h"
 #include "io/pacman.h"
 #include "util/util.h"
 
@@ -28,6 +29,7 @@ typedef enum SETTINGSPAGES
     PAGE_GAME = 0,
     PAGE_TEXTURE_PACKS,
     PAGE_DEBUG,
+    PAGE_OSS,
     PAGE_MAX,
 } SettingsPages;
 
@@ -224,6 +226,65 @@ void settings_render_debug(struct nk_context *ctx)
     nk_label_wrap(ctx, "The above seed will be used for your next deal");
 }
 
+void settings_render_oss(struct nk_context *ctx)
+{
+    // Nuklear Styles
+    float group_border = ctx->style.window.group_border;
+    struct nk_color group_border_color = ctx->style.window.group_border_color;
+    ctx->style.window.group_border = 2;
+    ctx->style.window.group_border_color = nk_rgb(255, 255, 255);
+
+    nk_layout_row_dynamic(ctx, 40, 1);
+    nk_label(ctx, "Open Source Software Licences", NK_TEXT_ALIGN_MIDDLE | NK_TEXT_ALIGN_CENTERED);
+
+    int row_wrap_height = settings_panel_width < 600 ? 48 : 24;
+
+    int count;
+    Licence *licences = licences_get(&count);
+    for (int i = 0; i < count; i++)
+    {
+        Licence licence = licences[i];
+        nk_layout_row_dynamic(ctx, row_wrap_height, 1);
+
+        if (i > 0)
+        {
+            nk_spacer(ctx);
+        }
+
+        if (licence.source)
+        {
+            nk_labelf_wrap(ctx, "%s | %s", licence.name, licence.source);
+        }
+        else
+        {
+            nk_label_wrap(ctx, licence.name);
+        }
+
+        if (licence.author)
+        {
+            nk_label_wrap(ctx, licence.author);
+        }
+        nk_layout_row_begin(ctx, NK_DYNAMIC, 300, 2);
+        nk_layout_row_push(ctx, 0.9);
+        if (nk_group_begin(ctx, licence.name, NK_WINDOW_BORDER))
+        {
+            nk_layout_row_dynamic(ctx, row_wrap_height, 1);
+            for (int i = 0; i < licence.line_count; i++)
+            {
+                nk_label_wrap(ctx, licence.lines[i]);
+            }
+            nk_group_end(ctx);
+        }
+        nk_layout_row_push(ctx, 0.1);
+        nk_spacer(ctx);
+        nk_layout_row_end(ctx);
+    }
+
+    // Reset Nuklear styles
+    ctx->style.window.group_border = group_border;
+    ctx->style.window.group_border_color = group_border_color;
+}
+
 void settings_nk_menu_button(struct nk_context *ctx, char *name, SettingsPages page, int spacer)
 {
     struct nk_style_item normal_orig = ctx->style.button.normal;
@@ -273,7 +334,8 @@ void settings_render(struct nk_context *ctx)
         {
             settings_nk_menu_button(ctx, "Solitaire", PAGE_GAME, 1);
             settings_nk_menu_button(ctx, "Texture Packs", PAGE_TEXTURE_PACKS, 1);
-            settings_nk_menu_button(ctx, "Debug", PAGE_DEBUG, 0);
+            settings_nk_menu_button(ctx, "Debug", PAGE_DEBUG, 1);
+            settings_nk_menu_button(ctx, "OSS", PAGE_OSS, 0);
 
             nk_layout_row_dynamic(ctx, 30, 1);
             nk_spacer(ctx);
@@ -288,10 +350,19 @@ void settings_render(struct nk_context *ctx)
             nk_spacing(ctx, 1);
 
             nk_layout_row_dynamic(ctx, 30, 1);
-            if (nk_button_label(ctx, "Return to menu"))
+            if (nk_button_label(ctx, "Leaderboard"))
             {
                 scene_pop();
-                scene_pop();
+                scene_push(&LeaderboardScene);
+            }
+
+            nk_layout_row_dynamic(ctx, 2, 1);
+            nk_spacing(ctx, 1);
+
+            nk_layout_row_dynamic(ctx, 30, 1);
+            if (nk_button_label(ctx, "Return to menu"))
+            {
+                scene_pop_to(&MenuScene);
             }
             nk_group_end(ctx);
         }
@@ -313,6 +384,11 @@ void settings_render(struct nk_context *ctx)
             case PAGE_DEBUG:
             {
                 settings_render_debug(ctx);
+                break;
+            }
+            case PAGE_OSS:
+            {
+                settings_render_oss(ctx);
                 break;
             }
             default:

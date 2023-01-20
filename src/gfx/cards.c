@@ -677,9 +677,6 @@ void cards_position_sprites(Solitaire *solitaire, int animate)
 
         if (card->flags & FLAGS_ANIMATING)
         {
-            printf("sprite %s %s animation cancelled (%.00f,%.00f) to (%d,%d)\n",
-                   SUITS[card->suit], VALUE[card->value], animation_origins[i].x,
-                   animation_origins[i].y, card->x, card->y);
             anim_cancel(card->animPtr);
         }
 

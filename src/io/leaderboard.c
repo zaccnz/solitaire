@@ -81,16 +81,17 @@ void leaderboard_load()
 {
     leaderboard = DEFAULT_LEADERBOARD;
 
-    FILE *fp = fopen("res/leaderboard.toml", "r");
-    if (!fp)
+    char *data = LoadFileText("res/leaderboard.toml");
+
+    if (!data)
     {
-        printf("cannot open res/leaderboard.toml - %s\n", strerror(errno));
+        printf("failed to read res/leaderboard.toml\n");
         return;
     }
 
     char errbuf[200];
-    toml_table_t *leaderboard_toml = toml_parse_file(fp, errbuf, sizeof(errbuf));
-    fclose(fp);
+    toml_table_t *leaderboard_toml = toml_parse(data, errbuf, sizeof(errbuf));
+    UnloadFileText(data);
 
     if (!leaderboard_toml)
     {
@@ -172,16 +173,16 @@ void leaderboard_submit(int seed, int score, int game_time, int moves)
         changed = 1;
     }
 
-    int insert_index = leaderboard.entry_count;
+    int insert_index = 0;
 
     for (int i = 0; i < leaderboard.entry_count; i++)
     {
-        if (score < leaderboard.entries[i].score)
+        if (score >= leaderboard.entries[i].score)
         {
             continue;
         }
 
-        insert_index = i;
+        insert_index = i + 1;
         break;
     }
 

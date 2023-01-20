@@ -23,8 +23,10 @@ add_executable(${PROJECT_NAME}
   src/io/tex/textures.c
   src/io/config.c
   src/io/leaderboard.c
+  src/io/licences.c
   src/io/pacman.c
   src/scenes/game.c
+  src/scenes/leaderboard.c
   src/scenes/menu.c
   src/scenes/scene.c
   src/scenes/settings.c

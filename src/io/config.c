@@ -2,6 +2,7 @@
 
 #include "util/toml_writer.h"
 
+#include <raylib.h>
 #include <stdio.h>
 #include <string.h>
 #include <toml.h>
@@ -228,20 +229,21 @@ void config_load()
     config_push_pack(&config.textures.backs, CFG_DEFAULT_PACK, CFG_DEFAULT_TEXTURE_NAME_BACKS);
     config_push_pack(&config.textures.cards, CFG_DEFAULT_PACK, CFG_DEFAULT_TEXTURE_NAME);
 
-    FILE *fp = fopen("res/config.toml", "r");
-    if (!fp)
+    char *data = LoadFileText("res/config.toml");
+
+    if (!data)
     {
-        printf("cannot open res/config.toml - %s\n", strerror(errno));
+        printf("failed to read res/config.toml\n");
         return;
     }
 
     char errbuf[200];
-    toml_table_t *config_toml = toml_parse_file(fp, errbuf, sizeof(errbuf));
-    fclose(fp);
+    toml_table_t *config_toml = toml_parse(data, errbuf, sizeof(errbuf));
+    UnloadFileText(data);
 
     if (!config_toml)
     {
-        printf("cannot parse - %s\n", errbuf);
+        printf("cannot parse res/config.toml: %s\n", errbuf);
         return;
     }
 

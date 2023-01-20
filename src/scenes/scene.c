@@ -47,6 +47,20 @@ void scene_pop()
     }
 }
 
+void scene_pop_to(const Scene *scene)
+{
+    if (!scene_is_on_stack(scene))
+    {
+        printf("scene manager: failed to pop to scene, not on stack\n");
+        return;
+    }
+
+    while (scenes[scene_count - 1] != scene)
+    {
+        scene_pop();
+    }
+}
+
 void scene_pop_all()
 {
     while (scene_count > 0)
@@ -100,4 +114,16 @@ void scene_update(float delta)
         if (update)
             update(delta, i != (scene_count - 1));
     }
+}
+
+int scene_is_on_stack(const Scene *scene)
+{
+    for (int i = 0; i < scene; i++)
+    {
+        if (scenes[i] == scene)
+        {
+            return 1;
+        }
+    }
+    return 0;
 }

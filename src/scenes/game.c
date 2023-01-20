@@ -1,6 +1,7 @@
 #include "scenes/scene.h"
 
 #include "gfx/animations.h"
+#include "gfx/animator.h"
 #include "io/config.h"
 #include "io/leaderboard.h"
 #include "solitaire.h"
@@ -17,7 +18,7 @@ float auto_complete_timer;
 int did_complete = 0;
 float ten_second_timer;
 
-void new_game(int first)
+void game_new_deal(int seed)
 {
     if (solitaire.config.seed != 0)
     {
@@ -25,7 +26,7 @@ void new_game(int first)
     }
 
     solitaire = solitaire_create((SolitaireConfig){
-        .seed = config.debug.seed,
+        .seed = seed == 0 ? config.debug.seed : seed,
         .deal_three = config.solitaire.dealthree,
         .timed = config.solitaire.timed,
     });
@@ -38,12 +39,13 @@ void new_game(int first)
     did_complete = 0;
     ten_second_timer = 0.0f;
 
+    anim_clear_all();
     animation_deal(&solitaire);
 }
 
 void start()
 {
-    new_game(1);
+    game_new_deal(0);
 }
 
 void stop()
@@ -73,7 +75,7 @@ void update(float dt, int background)
 
     if (IsKeyPressed(KEY_R))
     {
-        new_game(0);
+        game_new_deal(0);
     }
 
     if (IsKeyPressed(KEY_P))

@@ -14,9 +14,12 @@
 
 int main(int argc, char **argv)
 {
+    // init utilities
     config_load();
     leaderboard_load();
+    licences_load();
 
+    // init raylib
     SetExitKey(KEY_NULL);
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     if (config.fullscreen)
@@ -31,17 +34,20 @@ int main(int argc, char **argv)
     ctx->style.checkbox.cursor_hover = nk_style_item_color(nk_rgb(255, 255, 255));
     ctx->style.checkbox.cursor_normal = nk_style_item_color(nk_rgb(255, 255, 255));
 
+    // init physfs
     PHYSFS_init(argv[0]);
 
+    // init game components
     pacman_reload_packs();
-
     audio_init();
     cards_init();
-
     scene_push(&GameScene);
+    layout_resize();
 
+    // main loop
     while (!WindowShouldClose())
     {
+        /* UPDATE */
         UpdateNuklear(ctx);
 
         audio_update();
@@ -57,31 +63,35 @@ int main(int argc, char **argv)
 
         scene_update(GetFrameTime());
 
+        /* RENDER */
         BeginDrawing();
+
         ClearBackground(RAYWHITE);
-
         scene_render(ctx);
-
         DrawNuklear(ctx);
 
         EndDrawing();
     }
 
-    scene_pop_all();
-
+    // cleanup game components
     anim_release();
+
+    scene_pop_all();
     cards_free();
     audio_free();
     pacman_free_packs();
 
-    config_save();
-    config_free();
-
+    // cleanup physfs
     PHYSFS_deinit();
 
+    // cleanup raylib
     UnloadNuklear(ctx);
     UnloadFont(font);
-
     CloseWindow();
+
+    // cleanup utilities
+    licences_free();
+    config_save();
+    config_free();
     return 0;
 }
