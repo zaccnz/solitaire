@@ -1,4 +1,5 @@
 #include "gfx/animator.h"
+#include "gfx/background.h"
 #include "gfx/cards.h"
 #include "io/config.h"
 #include "io/leaderboard.h"
@@ -20,7 +21,6 @@ int main(int argc, char **argv)
     licences_load();
 
     // init raylib
-    SetExitKey(KEY_NULL);
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     if (config.fullscreen)
     {
@@ -28,6 +28,7 @@ int main(int argc, char **argv)
     }
 
     InitWindow(config.window_size.width, config.window_size.height, "solitaire");
+    SetExitKey(KEY_NULL);
 
     Font font = LoadFontEx("res/font/roboto/Roboto-Medium.ttf", 20, 0, 250);
     struct nk_context *ctx = InitNuklearEx(font, 20);
@@ -41,7 +42,8 @@ int main(int argc, char **argv)
     pacman_reload_packs();
     audio_init();
     cards_init();
-    scene_push(&GameScene);
+    scene_push(&MenuScene);
+    scene_push(&GameScene); // TODO: remove when complete
     layout_resize();
 
     // main loop
@@ -66,7 +68,17 @@ int main(int argc, char **argv)
         /* RENDER */
         BeginDrawing();
 
-        ClearBackground(RAYWHITE);
+        Assets *bg_assets = pacman_get_current_assets(ASSET_BACKGROUNDS);
+        if (bg_assets->background.type == BACKGROUND_COLOUR)
+        {
+            ClearBackground(bg_assets->background.colour);
+        }
+        else
+        {
+            ClearBackground(RAYWHITE);
+            background_render(bg_assets);
+        }
+
         scene_render(ctx);
         DrawNuklear(ctx);
 

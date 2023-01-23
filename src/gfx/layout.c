@@ -26,10 +26,12 @@ float card_aspect_ratio = 1.0f / 1.5f;
 
 void layout_resize()
 {
-    printf("layout resized\n");
+    Assets *assets = pacman_get_current_assets(ASSET_CARDS);
 
     width = GetScreenWidth();
     height = GetScreenHeight();
+
+    card_aspect_ratio = (float)assets->cards[0].width / (float)assets->cards[0].height;
 
     card_width = min(width / CARDS_HORIZONTAL, (height * card_aspect_ratio) / CARDS_VERTICAL);
     card_width = CLOSEST_MULT(card_width, 5);
@@ -41,8 +43,12 @@ void layout_resize()
 
 void layout_pack_changed()
 {
-    TexturePack *pack = pacman_get_current(TEXTURE_CARDS);
+    TexturePack *pack = pacman_get_current(ASSET_CARDS);
     card_vertical_spacing = pack->card_vertical_spacing;
+
+    Assets *assets = pacman_get_current_assets(ASSET_CARDS);
+    card_aspect_ratio = (float)assets->cards[0].width / (float)assets->cards[0].height;
+    card_height = card_width / card_aspect_ratio;
 }
 
 void layout_cardsize(int *width, int *height)

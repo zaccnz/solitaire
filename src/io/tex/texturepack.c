@@ -3,8 +3,113 @@
 #include "util/util.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <toml.h>
+
+const char *BACKGROUND_TYPE_NAMES[BACKGROUND_MAX] = {
+    NULL,
+    "colour",
+    "cover",
+    "stretch",
+    "tiled",
+};
+
+const char *DEFAULT_SUIT_NAMES[SUIT_MAX] = {
+    "Clubs",
+    "Hearts",
+    "Spades",
+    "Diamonds",
+};
+
+const char *DEFAULT_VALUE_NAMES[VALUE_MAX] = {
+    "A",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+    "J",
+    "Q",
+    "K",
+};
+
+const char *DEFAULT_BACK_ASSET_NAMES[3] = {
+    "Blue",
+    "Red",
+    "Green",
+};
+
+const char *DEFAULT_BACK_NAMES[3] = {
+    "blue1",
+    "green1",
+    "red1",
+};
+
+int pack_load_default_assets(TexturePack *pack)
+{
+    char path[256];
+    memset(path, 0, 256);
+
+    pack->assets = malloc(sizeof(Assets *) * 4);
+    pack->assets_count = 4;
+    pack->assets_size = 4;
+
+    pack->assets[0] = malloc(sizeof(Assets));
+    pack->assets[0]->type = ASSET_CARDS;
+    pack->assets[0]->name = malloc(256);
+    memset(pack->assets[0]->name, 0, 256);
+    strncpy(pack->assets[0]->name, "Default", 256);
+
+    for (int i = 0; i < SUIT_MAX; i++)
+    {
+        for (int j = 0; j < VALUE_MAX; j++)
+        {
+            snprintf(path, 256, "res/tex/Cards/card%s%s.png", DEFAULT_SUIT_NAMES[i], DEFAULT_VALUE_NAMES[j]);
+            pack->assets[0]->cards[i * VALUE_MAX + j] = LoadTexture(path);
+        }
+    }
+
+    for (int i = 0; i < 3; i++)
+    {
+        pack->assets[i + 1] = malloc(sizeof(Assets));
+        Assets *assets = pack->assets[i + 1];
+        assets->type = ASSET_BACKS;
+        assets->name = malloc(256);
+        memset(assets->name, 0, 256);
+        strncpy(assets->name, DEFAULT_BACK_ASSET_NAMES[i], 256);
+        snprintf(path, 256, "res/tex/Cards/cardBack_%s.png", DEFAULT_BACK_NAMES[i]);
+        assets->card_back = LoadTexture(path);
+    }
+
+    return 1;
+}
+
+int pack_load_default(TexturePack *pack)
+{
+    pack->name = malloc(256);
+    memset(pack->name, 0, 256);
+    strncpy(pack->name, "Internal", 256);
+    pack->author = malloc(256);
+    memset(pack->author, 0, 256);
+    strncpy(pack->author, "Kenney", 256);
+    pack->path = malloc(256);
+    memset(pack->path, 0, 256);
+    strncpy(pack->path, "res/tex", 256);
+
+    pack->card_vertical_spacing = 0.3f;
+
+    pack->spritesheets = 0;
+    pack->spritesheets_count = 0;
+
+    pack_load_default_assets(pack);
+
+    return 1;
+}
 
 int pack_load_metadata(TexturePack *pack, toml_table_t *meta)
 {
@@ -36,6 +141,19 @@ int pack_load_metadata(TexturePack *pack, toml_table_t *meta)
     return 1;
 }
 
+BackgroundType pack_get_background_type(char *type)
+{
+    for (int i = 1; i < BACKGROUND_MAX; i++)
+    {
+        if (!strcmp(type, BACKGROUND_TYPE_NAMES[i]))
+        {
+            return i;
+        }
+    }
+
+    return BACKGROUND_NONE;
+}
+
 int pack_load_backgrounds(TexturePack *pack, toml_array_t *backgrounds)
 {
     int subtables = toml_array_nelem(backgrounds);
@@ -55,23 +173,55 @@ int pack_load_backgrounds(TexturePack *pack, toml_array_t *backgrounds)
             continue;
         }
 
-        toml_datum_t texture = toml_string_in(table, "texture");
-        if (!texture.ok)
-        {
-            printf("pack %s background %s missing texture\n", pack->name, name.u.s);
-            continue;
-        }
-
         int created;
-        Textures *textures = textures_find_or_create(pack, name.u.s, &created);
+        Assets *assets = assets_find_or_create(pack, name.u.s, &created);
         if (!created)
         {
             free(name.u.s);
         }
-        textures->type |= TEXTURE_BACKGROUNDS;
+        assets->type |= ASSET_BACKGROUNDS;
 
-        texture_from_path(texture.u.s, &textures->background);
-        free(texture.u.s);
+        toml_datum_t type = toml_string_in(table, "type");
+        if (!type.ok)
+        {
+            printf("pack %s background %d missing type\n", pack->name, i);
+            continue;
+        }
+        assets->background.type = pack_get_background_type(type.u.s);
+        free(type.u.s);
+
+        toml_datum_t placeholder = toml_string_in(table, "placeholder");
+        if (!placeholder.ok)
+        {
+            printf("pack %s background %d missing placeholder colour\n", pack->name, i);
+            continue;
+        }
+        assets->background.placeholder = string_to_colour(placeholder.u.s);
+        free(placeholder.u.s);
+
+        if (assets->background.type == BACKGROUND_COLOUR)
+        {
+            toml_datum_t colour = toml_string_in(table, "colour");
+            if (!colour.ok)
+            {
+                printf("pack %s background %d missing colour\n", pack->name, i);
+                continue;
+            }
+            assets->background.colour = string_to_colour(colour.u.s);
+            free(colour.u.s);
+        }
+        else
+        {
+            toml_datum_t texture = toml_string_in(table, "texture");
+            if (!texture.ok)
+            {
+                printf("pack %s background %s missing texture\n", pack->name, name.u.s);
+                continue;
+            }
+
+            texture_from_path(texture.u.s, &assets->background.texture);
+            free(texture.u.s);
+        }
     }
     return 1;
 }
@@ -86,7 +236,7 @@ int pack_load_card(TexturePack *pack, toml_table_t *card, const char *key)
     }
 
     int created = 0;
-    Textures *textures = textures_find_or_create(pack, name.u.s, &created);
+    Assets *assets = assets_find_or_create(pack, name.u.s, &created);
     if (!created)
     {
         free(name.u.s);
@@ -122,8 +272,8 @@ int pack_load_card(TexturePack *pack, toml_table_t *card, const char *key)
     Texture *out = NULL;
     if (!strcmp(key, "back"))
     {
-        out = &textures->card_back;
-        textures->type |= TEXTURE_BACKS;
+        out = &assets->card_back;
+        assets->type |= ASSET_BACKS;
     }
     else
     {
@@ -133,8 +283,8 @@ int pack_load_card(TexturePack *pack, toml_table_t *card, const char *key)
             printf("card definition invalid key %s\n", key);
             return 0;
         }
-        out = &textures->cards[index];
-        textures->type |= TEXTURE_CARDS;
+        out = &assets->cards[index];
+        assets->type |= ASSET_CARDS;
     }
 
     int result = 0;
@@ -177,12 +327,12 @@ int pack_load_suit_or_values(TexturePack *pack, toml_table_t *card, Suit suit, V
     }
 
     int created = 0;
-    Textures *textures = textures_find_or_create(pack, name.u.s, &created);
+    Assets *assets = assets_find_or_create(pack, name.u.s, &created);
     if (!created)
     {
         free(name.u.s);
     }
-    textures->type |= TEXTURE_CARDS;
+    assets->type |= ASSET_CARDS;
 
     toml_array_t *files = toml_array_in(card, "files");
     if (files)
@@ -201,7 +351,7 @@ int pack_load_suit_or_values(TexturePack *pack, toml_table_t *card, Suit suit, V
             path.u.s[0] = 0;
         }
 
-        if (!textures_from_directory(textures, path.u.s, suit, value, files))
+        if (!assets_cards_from_directory(assets, path.u.s, suit, value, files))
         {
             printf("in pack %s\n", toml_table_key(card));
             free(path.u.s);
@@ -316,7 +466,7 @@ int pack_load_suit_or_values(TexturePack *pack, toml_table_t *card, Suit suit, V
         {
             card_suit = suit;
         }
-        Texture *tex = &textures->cards[card_suit * VALUE_MAX + card_value];
+        Texture *tex = &assets->cards[card_suit * VALUE_MAX + card_value];
         free(value_toml.u.s);
 
         spritesheet_get_texture_index(sheet, pack, tex, index);
@@ -378,9 +528,9 @@ int pack_load(const char *path, TexturePack *pack)
 
     pack->spritesheets = NULL;
     pack->spritesheets_count = 0;
-    pack->textures = NULL;
-    pack->textures_count = 0;
-    pack->textures_size = 0;
+    pack->assets = NULL;
+    pack->assets_count = 0;
+    pack->assets_size = 0;
 
     char errbuf[200];
 
@@ -436,20 +586,20 @@ int pack_load(const char *path, TexturePack *pack)
         return 0;
     }
 
-    textures_fill_with_default(pack);
+    assets_cards_fill_with_default(pack);
 
     toml_free(pack_toml);
 
     printf("==== %s ====\n", pack->path);
     printf("Texture Pack %s (%s) Loaded\n", pack->name, pack->author);
-    printf("  %d textures\n", pack->textures_count);
-    for (int i = 0; i < pack->textures_count; i++)
+    printf("  %d assets\n", pack->assets_count);
+    for (int i = 0; i < pack->assets_count; i++)
     {
-        Textures *textures = pack->textures[i];
-        printf("  %s %s (background %d, backs %d, cards %d)\n", pack->name, textures->name,
-               textures->type & TEXTURE_BACKGROUNDS && 1,
-               textures->type & TEXTURE_BACKS && 1,
-               textures->type & TEXTURE_CARDS && 1);
+        Assets *assets = pack->assets[i];
+        printf("  %s %s (background %d, backs %d, cards %d)\n", pack->name, assets->name,
+               assets->type & ASSET_BACKGROUNDS && 1,
+               assets->type & ASSET_BACKS && 1,
+               assets->type & ASSET_CARDS && 1);
     }
     printf("  %d spritesheets\n", pack->spritesheets_count);
     for (int i = 0; i < pack->spritesheets_count; i++)
@@ -469,9 +619,9 @@ int pack_free(TexturePack *pack)
         spritesheet_free(&pack->spritesheets[i]);
     }
 
-    for (int i = 0; i < pack->textures_count; i++)
+    for (int i = 0; i < pack->assets_count; i++)
     {
-        textures_free(pack->textures[i]);
+        assets_free(pack->assets[i]);
     }
 
     free(pack->name);
@@ -481,9 +631,9 @@ int pack_free(TexturePack *pack)
     {
         free(pack->spritesheets);
     }
-    if (pack->textures)
+    if (pack->assets)
     {
-        free(pack->textures);
+        free(pack->assets);
     }
 
     return 0;
@@ -504,11 +654,11 @@ Spritesheet *pack_get_spritesheet(TexturePack *pack, const char *spritesheet)
 
 char **pack_get_texture_names(TexturePack *pack, int *count)
 {
-    char **names = malloc(sizeof(char *) * pack->textures_count);
-    for (int i = 0; i < pack->textures_count; i++)
+    char **names = malloc(sizeof(char *) * pack->assets_count);
+    for (int i = 0; i < pack->assets_count; i++)
     {
-        names[i] = pack->textures[i]->name;
+        names[i] = pack->assets[i]->name;
     }
-    *count = pack->textures_count;
+    *count = pack->assets_count;
     return names;
 }

@@ -2,7 +2,6 @@
 
 #include "gfx/animations.h"
 #include "gfx/layout.h"
-#include "io/config.h"
 #include "io/pacman.h"
 #include "util/util.h"
 
@@ -435,13 +434,32 @@ void cards_update(Solitaire *solitaire, int background)
     }
 }
 
+void cards_render_empty_pile(LayoutPosition pos, void *data, Assets *bg_assets)
+{
+    CalcOut out;
+    layout_calculate(pos, data, &out);
+
+    Rectangle rect = {
+        .x = out.x,
+        .y = out.y,
+        .width = out.width,
+        .height = out.height,
+    };
+
+    DrawRectangleRoundedLines(rect, 0.1f, 20, 2, bg_assets->background.placeholder);
+}
+
+int cards_is_animating(Card card)
+{
+    int index = card_to_index(&card);
+    return cards[index].flags & FLAGS_ANIMATING;
+}
+
 void cards_render(Solitaire *solitaire, struct nk_context *ctx)
 {
-    TexturePack *pack_cards = pacman_get_current(TEXTURE_CARDS);
-    TexturePack *pack_backs = pacman_get_current(TEXTURE_BACKS);
-
-    Textures *tex_cards = pacman_get_current_textures(TEXTURE_CARDS);
-    Textures *tex_backs = pacman_get_current_textures(TEXTURE_BACKS);
+    Assets *assets_background = pacman_get_current_assets(ASSET_BACKGROUNDS);
+    Assets *assets_cards = pacman_get_current_assets(ASSET_CARDS);
+    Assets *assets_backs = pacman_get_current_assets(ASSET_BACKS);
 
     Rectangle source = {
         .x = 0,
@@ -454,6 +472,30 @@ void cards_render(Solitaire *solitaire, struct nk_context *ctx)
     layout_cardsize(&w, &h);
     Rectangle dest = {0, 0, w, h};
     Vector2 origin = {0, 0};
+
+    // Render any empty piles
+    for (int i = 0; i < SUIT_MAX; i++)
+    {
+        if (ntlen(solitaire->foundations[i]) == 0 || cards_is_animating(*solitaire->foundations[i][0]))
+        {
+            cards_render_empty_pile(LAYOUT_FOUNDATION, &i, assets_background);
+        }
+    }
+    for (int i = 0; i < 7; i++)
+    {
+        if (ntlen(solitaire->tableu[i]) == 0 || cards_is_animating(*solitaire->tableu[i][0]))
+        {
+            Coordinate coord = {
+                .x = i,
+                .y = 0,
+            };
+            cards_render_empty_pile(LAYOUT_TABLEU, &coord, assets_background);
+        }
+    }
+    if (ntlen(solitaire->stock) == 0)
+    {
+        cards_render_empty_pile(LAYOUT_STOCK, NULL, assets_background);
+    }
 
     // Sort render list by zindex (insertion sort)
     for (int i = 1; i < MAX_CARDS; i++)
@@ -473,11 +515,11 @@ void cards_render(Solitaire *solitaire, struct nk_context *ctx)
     {
         CardSprite *sprite = render_list[i];
         int index = sprite->suit * VALUE_MAX + sprite->value;
-        Texture texture = tex_cards->cards[index];
+        Texture texture = assets_cards->cards[index];
 
         if (!(sprite->flags & FLAGS_REVEALED))
         {
-            texture = tex_backs->card_back;
+            texture = assets_backs->card_back;
         }
 
         source.width = texture.width;
@@ -486,55 +528,11 @@ void cards_render(Solitaire *solitaire, struct nk_context *ctx)
         dest.y = sprite->y;
         DrawTexturePro(texture, source, dest, origin, 0.0f, WHITE);
     }
-
-    if (config.debug.render_hitboxes)
-    {
-        for (int i = 0; i < MAX_CARDS; i++)
-        {
-            CardSprite *sprite = render_list[i];
-
-            if (!(sprite->flags & FLAGS_HITBOX))
-            {
-                continue;
-            }
-
-            char buffer[256];
-            snprintf(buffer, 256, "%s %s", SUITS[sprite->suit], VALUE[sprite->value]);
-            DrawText(buffer, sprite->hitbox.x + 2, sprite->hitbox.y + sprite->hitbox.height - 14, 12, RED);
-            DrawRectangleLinesEx(sprite->hitbox, 2, BLUE);
-        }
-    }
-
-    if (config.debug.render_animation_list)
-    {
-        struct nk_rect animation_list_bounds = nk_rect(
-            config.window_size.width - 150,
-            config.window_size.height - 200,
-            140, 140);
-
-        if (nk_begin(ctx, "animation list", animation_list_bounds, NK_WINDOW_BORDER))
-        {
-            nk_layout_row_static(ctx, 30, 120, 1);
-            for (int i = 0; i < MAX_CARDS; i++)
-            {
-                CardSprite *sprite = render_list[i];
-
-                if (!(sprite->flags & FLAGS_ANIMATING))
-                {
-                    continue;
-                }
-
-                nk_labelf(ctx, NK_TEXT_LEFT, "%s %s (%.02f)", SUITS[sprite->suit],
-                          VALUE[sprite->value], anim_get_duration(sprite->animPtr));
-            }
-        }
-        nk_end(ctx);
-    }
 }
 
 void cards_position_sprites(Solitaire *solitaire, int animate)
 {
-    TexturePack *current_pack = pacman_get_current(TEXTURE_CARDS);
+    TexturePack *current_pack = pacman_get_current(ASSET_CARDS);
     int update_count = 0;
     CardSprite *update_cards[MAX_CARDS];
     Card *update_nexts[MAX_CARDS];

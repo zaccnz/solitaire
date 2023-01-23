@@ -63,39 +63,39 @@ void settings_refresh_dropdown()
     backs_data.length = 0;
     cards_data.length = 0;
 
-    TexturePack *backgrounds_current = pacman_get_current(TEXTURE_BACKGROUNDS);
-    Textures *backgrounds_current_textures = pacman_get_current_textures(TEXTURE_BACKGROUNDS);
-    TexturePack *backs_current = pacman_get_current(TEXTURE_BACKS);
-    Textures *backs_current_textures = pacman_get_current_textures(TEXTURE_BACKS);
-    TexturePack *cards_current = pacman_get_current(TEXTURE_CARDS);
-    Textures *cards_current_textures = pacman_get_current_textures(TEXTURE_CARDS);
+    TexturePack *backgrounds_current = pacman_get_current(ASSET_BACKGROUNDS);
+    Assets *backgrounds_current_assets = pacman_get_current_assets(ASSET_BACKGROUNDS);
+    TexturePack *backs_current = pacman_get_current(ASSET_BACKS);
+    Assets *backs_current_assets = pacman_get_current_assets(ASSET_BACKS);
+    TexturePack *cards_current = pacman_get_current(ASSET_CARDS);
+    Assets *cards_current_assets = pacman_get_current_assets(ASSET_CARDS);
 
     for (int i = 0; i < min(count, 256); i++)
     {
         PackPointer *ptr = &pointers[i];
-        if (ptr->type & TEXTURE_BACKGROUNDS)
+        if (ptr->type & ASSET_BACKGROUNDS)
         {
             int index = data_add_pointer(&background_data, ptr);
             if (!strcmp(backgrounds_current->name, ptr->name) &&
-                !strcmp(backgrounds_current_textures->name, ptr->texture_name))
+                !strcmp(backgrounds_current_assets->name, ptr->texture_name))
             {
                 background_data.last = index;
             }
         }
-        if (ptr->type & TEXTURE_BACKS)
+        if (ptr->type & ASSET_BACKS)
         {
             int index = data_add_pointer(&backs_data, ptr);
             if (!strcmp(backs_current->name, ptr->name) &&
-                !strcmp(backs_current_textures->name, ptr->texture_name))
+                !strcmp(backs_current_assets->name, ptr->texture_name))
             {
                 backs_data.last = index;
             }
         }
-        if (ptr->type & TEXTURE_CARDS)
+        if (ptr->type & ASSET_CARDS)
         {
             int index = data_add_pointer(&cards_data, ptr);
             if (!strcmp(cards_current->name, ptr->name) &&
-                !strcmp(cards_current_textures->name, ptr->texture_name))
+                !strcmp(cards_current_assets->name, ptr->texture_name))
             {
                 cards_data.last = index;
             }
@@ -129,7 +129,7 @@ void settings_update(float dt, int background)
     }
 }
 
-int settings_nk_draw_dropdown(struct nk_context *ctx, char *name, TextureType type, struct DropdownData *data)
+int settings_nk_draw_dropdown(struct nk_context *ctx, char *name, AssetType type, struct DropdownData *data)
 {
     nk_label(ctx, name, NK_TEXT_LEFT);
     nk_layout_row_static(ctx, 25, 200, 1);
@@ -186,9 +186,9 @@ void settings_render_texture_packs(struct nk_context *ctx)
     }
 
     nk_layout_row_dynamic(ctx, 30, 1);
-    settings_nk_draw_dropdown(ctx, "Background", TEXTURE_BACKGROUNDS, &background_data);
-    settings_nk_draw_dropdown(ctx, "Card Back", TEXTURE_BACKS, &backs_data);
-    settings_nk_draw_dropdown(ctx, "Cards", TEXTURE_CARDS, &cards_data);
+    settings_nk_draw_dropdown(ctx, "Background", ASSET_BACKGROUNDS, &background_data);
+    settings_nk_draw_dropdown(ctx, "Card Back", ASSET_BACKS, &backs_data);
+    settings_nk_draw_dropdown(ctx, "Cards", ASSET_CARDS, &cards_data);
 }
 
 void settings_render_debug(struct nk_context *ctx)
@@ -206,6 +206,10 @@ void settings_render_debug(struct nk_context *ctx)
     {
         config_save();
     }
+    if (nk_checkbox_label(ctx, "Leaderboard tool", &config.debug.render_leaderboard_tool))
+    {
+        config_save();
+    }
     nk_layout_row_begin(ctx, NK_STATIC, 30, 2);
     nk_layout_row_push(ctx, 60);
     {
@@ -218,7 +222,6 @@ void settings_render_debug(struct nk_context *ctx)
         {
             config.debug.seed = strtol(seed_buffer, NULL, 10);
             config_save();
-            printf("edit committed\n");
         }
     }
     nk_layout_row_end(ctx);
@@ -352,7 +355,6 @@ void settings_render(struct nk_context *ctx)
             nk_layout_row_dynamic(ctx, 30, 1);
             if (nk_button_label(ctx, "Leaderboard"))
             {
-                scene_pop();
                 scene_push(&LeaderboardScene);
             }
 

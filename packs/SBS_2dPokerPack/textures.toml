@@ -32,7 +32,15 @@ dimensions = [3, 5]
 
 [[backgrounds]]
   name = "Default"
+  type = "tiled"
   texture = "background.png"
+  placeholder = "#ffffff"
+
+[[backgrounds]]
+  name = "Colour"
+  type = "colour"
+  colour = "#408080"
+  placeholder = "#ffffff"
 
 [cards]
   # When defining a single card, e.g., back, A_diamonds, 5_spades, use row and column.

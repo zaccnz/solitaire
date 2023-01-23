@@ -16,11 +16,12 @@ add_executable(${PROJECT_NAME}
 
   src/gfx/animations.c
   src/gfx/animator.c
+  src/gfx/background.c
   src/gfx/cards.c
   src/gfx/layout.c
+  src/io/tex/assets.c
   src/io/tex/spritesheet.c
   src/io/tex/texturepack.c
-  src/io/tex/textures.c
   src/io/config.c
   src/io/leaderboard.c
   src/io/licences.c
@@ -31,6 +32,7 @@ add_executable(${PROJECT_NAME}
   src/scenes/scene.c
   src/scenes/settings.c
   src/sfx/audio.c
+  src/util/debug.c
   src/util/toml_writer.c
   src/util/unitbezier.c
   src/util/util.c

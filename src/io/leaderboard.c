@@ -173,16 +173,14 @@ void leaderboard_submit(int seed, int score, int game_time, int moves)
         changed = 1;
     }
 
-    int insert_index = 0;
+    int insert_index = leaderboard.entry_count;
 
-    for (int i = 0; i < leaderboard.entry_count; i++)
+    for (; insert_index > 0; insert_index--)
     {
-        if (score >= leaderboard.entries[i].score)
+        if (score >= leaderboard.entries[insert_index - 1].score)
         {
             continue;
         }
-
-        insert_index = i + 1;
         break;
     }
 
@@ -190,14 +188,11 @@ void leaderboard_submit(int seed, int score, int game_time, int moves)
     {
         changed = 1;
 
-        int temp_set = 0;
-        LeaderboardEntry temp;
-        for (int i = insert_index + 1; i < leaderboard.entry_count; i++)
+        int replace_start = min(leaderboard.entry_count, LEADERBOARD_ENTRY_MAX - 1);
+
+        for (int i = replace_start; i > insert_index; i--)
         {
-            LeaderboardEntry replaced = leaderboard.entries[i];
-            leaderboard.entries[i] = temp_set ? temp : leaderboard.entries[i - 1];
-            temp = replaced;
-            temp_set = 1;
+            leaderboard.entries[i] = leaderboard.entries[i - 1];
         }
 
         int64_t timestamp = (int64_t)time(NULL);
@@ -209,12 +204,8 @@ void leaderboard_submit(int seed, int score, int game_time, int moves)
             .achieved = timestamp,
         };
 
-        if (leaderboard.entry_count < LEADERBOARD_ENTRY_MAX)
+        if (leaderboard.entry_count + 1 < LEADERBOARD_ENTRY_MAX)
         {
-            if (temp_set)
-            {
-                leaderboard.entries[leaderboard.entry_count] = temp;
-            }
             leaderboard.entry_count++;
         }
     }

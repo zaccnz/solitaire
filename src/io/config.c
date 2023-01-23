@@ -40,6 +40,7 @@ const Config DEFAULT_CONFIG = {
     .debug = {
         .render_hitboxes = 0,
         .render_animation_list = 0,
+        .render_leaderboard_tool = 0,
         .seed = 0,
     },
 };
@@ -125,6 +126,13 @@ int config_try_load_debug(toml_table_t *debug)
         return 0;
     }
     config.debug.render_animation_list = render_animation_list.u.b;
+    toml_datum_t render_leaderboard_tool = toml_int_in(debug, "render_leaderboard_tool");
+    if (!render_leaderboard_tool.ok)
+    {
+        printf("config missing debug.render_leaderboard_tool\n");
+        return 0;
+    }
+    config.debug.render_leaderboard_tool = render_leaderboard_tool.u.i;
     toml_datum_t seed = toml_int_in(debug, "seed");
     if (!seed.ok)
     {
@@ -332,6 +340,7 @@ void config_save()
     toml_writer_push_key(writer, "debug", 0);
     toml_writer_push_boolean(writer, "render_hitboxes", config.debug.render_hitboxes);
     toml_writer_push_boolean(writer, "render_animation_list", config.debug.render_animation_list);
+    toml_writer_push_boolean(writer, "render_leaderboard_tool", config.debug.render_leaderboard_tool);
     toml_writer_push_integer(writer, "seed", config.debug.seed);
     toml_writer_pop_key(writer);
 

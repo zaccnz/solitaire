@@ -4,6 +4,8 @@
 #include "gfx/animator.h"
 #include "io/config.h"
 #include "io/leaderboard.h"
+#include "util/debug.h"
+#include "util/util.h"
 #include "solitaire.h"
 
 #include <raylib.h>
@@ -13,10 +15,13 @@
 
 Solitaire solitaire;
 
-int auto_completing;
-float auto_complete_timer;
+int auto_completing = 0.0f;
+float auto_complete_timer = 0.0f;
 int did_complete = 0;
-float ten_second_timer;
+float ten_second_timer = 0.0f;
+
+int show_autocomplete_window = 0;
+int hide_autocomplete_window = 0;
 
 void game_new_deal(int seed)
 {
@@ -38,6 +43,9 @@ void game_new_deal(int seed)
     auto_complete_timer = 0.0f;
     did_complete = 0;
     ten_second_timer = 0.0f;
+
+    show_autocomplete_window = 0;
+    hide_autocomplete_window = 0;
 
     anim_clear_all();
     animation_deal(&solitaire);
@@ -126,20 +134,10 @@ void update(float dt, int background)
 
 void render(struct nk_context *ctx)
 {
-    int can_auto_complete = solitaire_can_auto_complete(&solitaire);
-
     cards_render(&solitaire, ctx);
+    debug_render(ctx, &solitaire);
 
-    if (solitaire_is_complete(&solitaire))
-    {
-        DrawText("game complete! well done", 360, 370, 30, GRAY);
-    }
-
-    if (can_auto_complete)
-    {
-        DrawText("press [c] to autocomplete", 10, 558, 16, GRAY);
-    }
-
+    // TODO: render text with font, and use layout system to get position
     char text[2048];
 
     if (solitaire.config.timed)
@@ -156,7 +154,91 @@ void render(struct nk_context *ctx)
     snprintf(text, 2048, "Score: %d", solitaire.score.points);
     DrawText(text, 10, 542, 16, GRAY);
 
-    DrawText("controls: [r] restart [z] undo [x] redo [p] pause", 10, 574, 16, GRAY);
+    int sw = GetScreenWidth(), sh = GetScreenHeight();
+
+    int action_width = min(sw - 20, 300);
+    int action_height = min(sh - 40, 250);
+
+    struct nk_rect action_bounds = nk_rect((sw - action_width) / 2,
+                                           (sh - action_height) / 2,
+                                           action_width,
+                                           action_height);
+
+    if (solitaire_is_complete(&solitaire) && nk_begin(ctx, "Game Complete", action_bounds, NULL))
+    {
+        nk_layout_row_dynamic(ctx, 40, 1);
+        nk_label(ctx, "Congratulations", NK_TEXT_ALIGN_MIDDLE | NK_TEXT_ALIGN_CENTERED);
+
+        nk_layout_row_dynamic(ctx, 24, 1);
+        nk_label(ctx, "Game Completed", NK_TEXT_ALIGN_LEFT);
+        if (solitaire.config.timed)
+        {
+            float elapsed = solitaire.score.elapsed;
+            nk_labelf(ctx, NK_TEXT_ALIGN_LEFT, "Time: %d:%02d",
+                      (int)(elapsed / 60), (int)(elapsed) % 60);
+        }
+
+        nk_labelf(ctx, NK_TEXT_ALIGN_LEFT, "Score: %d", solitaire.score.points);
+        nk_labelf(ctx, NK_TEXT_ALIGN_LEFT, "Moves: %d", solitaire.score.user_moves);
+
+        nk_layout_row_dynamic(ctx, 30, 1);
+        nk_spacer(ctx);
+        if (nk_button_label(ctx, "New Deal"))
+        {
+            game_new_deal(0);
+        }
+
+        nk_end(ctx);
+    }
+
+    if (solitaire_can_auto_complete(&solitaire) && !show_autocomplete_window && !hide_autocomplete_window)
+    {
+        show_autocomplete_window = 1;
+    }
+
+    if (show_autocomplete_window && nk_begin(ctx, "Autocomplete", action_bounds, NULL))
+    {
+        nk_layout_row_dynamic(ctx, 10, 1);
+        nk_spacer(ctx);
+        nk_layout_row_dynamic(ctx, 24, 1);
+        nk_label(ctx, "This game can be completed", NK_TEXT_ALIGN_MIDDLE | NK_TEXT_ALIGN_CENTERED);
+        nk_label(ctx, "automatically", NK_TEXT_ALIGN_MIDDLE | NK_TEXT_ALIGN_CENTERED);
+
+        nk_layout_row_dynamic(ctx, 80, 1);
+        nk_spacer(ctx);
+
+        nk_layout_row_dynamic(ctx, 30, 1);
+        if (nk_button_label(ctx, "Auto-complete"))
+        {
+            show_autocomplete_window = 0;
+            hide_autocomplete_window = 1;
+            auto_completing = 1;
+            auto_complete_timer = AUTO_COMPLETE_TIMEOUT;
+        }
+
+        if (nk_button_label(ctx, "Back"))
+        {
+            show_autocomplete_window = 0;
+            hide_autocomplete_window = 1;
+        }
+
+        nk_end(ctx);
+    }
+
+    int ctrl_height = 80;
+    int ctrl_pad = 10;
+    int ctrl_width = min(sw - (ctrl_pad * 2), 500);
+
+    struct nk_rect control_bounds = nk_rect((sw - ctrl_width) / 2,
+                                            sh - ctrl_height - ctrl_pad,
+                                            ctrl_width,
+                                            ctrl_height);
+
+    if (nk_begin(ctx, "Game Controls", control_bounds, NULL))
+    {
+        nk_layout_row_dynamic(ctx, ctrl_height - 20, 4);
+        nk_end(ctx);
+    }
 }
 
 const Scene GameScene = {

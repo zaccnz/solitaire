@@ -26,6 +26,7 @@ typedef struct Config
     {
         int render_hitboxes;
         int render_animation_list;
+        int render_leaderboard_tool;
         int seed;
     } debug;
 } Config;

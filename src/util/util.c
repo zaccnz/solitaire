@@ -169,3 +169,22 @@ char *physfs_read_to_mem(const char *path, int *size)
 
     return contents;
 }
+
+Color string_to_colour(char *value)
+{
+    if (value[0] == '#')
+    {
+        value++;
+    }
+
+    int hex = strtol(value, NULL, 16);
+
+    if (strlen(value) == 6)
+    {
+        // if no alpha is given, add a byte for opacity
+        hex <<= 8;
+        hex |= 0xff;
+    }
+
+    return GetColor(hex);
+}

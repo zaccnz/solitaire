@@ -12,7 +12,7 @@
 typedef struct CurrentPack
 {
     TexturePack *pack;
-    Textures *textures;
+    Assets *assets;
     PackPointer pointer;
     struct TextureConfig *config;
 } CurrentPack;
@@ -26,7 +26,7 @@ int pacman_mount_pack(char path[2048], char *file)
 {
     if (IsFileExtension(file, ".zip"))
     {
-        snprintf(path, 2048, "res/tex/%s", file);
+        snprintf(path, 2048, "packs/%s", file);
         PHYSFS_mount(path, NULL, 0);
 
         if (!PHYSFS_exists("textures.toml"))
@@ -42,7 +42,7 @@ int pacman_mount_pack(char path[2048], char *file)
             snprintf(path, 2048, "%s/textures.toml", dirs[0]);
             int exists = PHYSFS_exists(path);
 
-            snprintf(path, 2048, "res/tex/%s", file);
+            snprintf(path, 2048, "packs/%s", file);
 
             if (!exists)
             {
@@ -57,20 +57,20 @@ int pacman_mount_pack(char path[2048], char *file)
     }
     else
     {
-        snprintf(path, 2048, "res/tex/%s", file);
+        snprintf(path, 2048, "packs/%s", file);
 
         if (!DirectoryExists(path))
         {
             return 0;
         }
 
-        snprintf(path, 2048, "res/tex/%s/textures.toml", file);
+        snprintf(path, 2048, "packs/%s/textures.toml", file);
         if (!FileExists(path))
         {
             return 0;
         }
 
-        snprintf(path, 2048, "res/tex/%s", file);
+        snprintf(path, 2048, "packs/%s", file);
         PHYSFS_mount(path, NULL, 0);
     }
 
@@ -85,11 +85,13 @@ void pacman_reload_packs()
     }
 
     int count = 0;
-    pack_count = 0;
-    char **files = GetDirectoryFiles("res/tex", &count);
-    packs = malloc(sizeof(TexturePack) * count);
-    char path[2048];
+    char **files = GetDirectoryFiles("packs", &count);
+    packs = malloc(sizeof(TexturePack) * (count + 1));
 
+    pack_load_default(&packs[0]);
+    pack_count = 1;
+
+    char path[2048];
     for (int i = 0; i < count; i++)
     {
         if (!pacman_mount_pack(path, files[i]))
@@ -120,9 +122,9 @@ void pacman_reload_packs()
     // load from current pointers
     if (pack_background.pack && pack_backs.pack && pack_cards.pack)
     {
-        pacman_set_current(pack_background.pointer, TEXTURE_BACKGROUNDS);
-        pacman_set_current(pack_backs.pointer, TEXTURE_BACKS);
-        pacman_set_current(pack_cards.pointer, TEXTURE_CARDS);
+        pacman_set_current(pack_background.pointer, ASSET_BACKGROUNDS);
+        pacman_set_current(pack_backs.pointer, ASSET_BACKS);
+        pacman_set_current(pack_cards.pointer, ASSET_CARDS);
 
         if (pack_background.pack && pack_backs.pack && pack_cards.pack)
         {
@@ -132,10 +134,10 @@ void pacman_reload_packs()
     }
 
     // load from config
-    const TextureType TEX_TYPES[3] = {
-        TEXTURE_BACKGROUNDS,
-        TEXTURE_BACKS,
-        TEXTURE_CARDS,
+    const AssetType ASSET_TYPES[3] = {
+        ASSET_BACKGROUNDS,
+        ASSET_BACKS,
+        ASSET_CARDS,
     };
     const struct TextureConfig *STRUCTS[3] = {
         &config.textures.background,
@@ -146,13 +148,13 @@ void pacman_reload_packs()
     for (int i = 0; i < 3; i++)
     {
         PackPointer pointer = {
-            .type = TEX_TYPES[i],
+            .type = ASSET_TYPES[i],
             .name = {0},
             .texture_name = {0},
         };
         strncpy(pointer.name, STRUCTS[i]->pack, 256);
         strncpy(pointer.texture_name, STRUCTS[i]->texture_name, 256);
-        pacman_set_current(pointer, TEX_TYPES[i]);
+        pacman_set_current(pointer, ASSET_TYPES[i]);
     }
 
     if (pack_background.pack && pack_backs.pack && pack_cards.pack)
@@ -166,19 +168,19 @@ void pacman_reload_packs()
     PackPointer *ptr = pacman_list_packs(&count);
     for (int i = 0; i < count; i++)
     {
-        if (!pack_background.pack && ptr[i].type & TEXTURE_BACKGROUNDS)
+        if (!pack_background.pack && ptr[i].type & ASSET_BACKGROUNDS)
         {
-            pacman_set_current(ptr[i], TEXTURE_BACKGROUNDS);
+            pacman_set_current(ptr[i], ASSET_BACKGROUNDS);
         }
 
-        if (!pack_backs.pack && ptr[i].type & TEXTURE_BACKS)
+        if (!pack_backs.pack && ptr[i].type & ASSET_BACKS)
         {
-            pacman_set_current(ptr[i], TEXTURE_BACKS);
+            pacman_set_current(ptr[i], ASSET_BACKS);
         }
 
-        if (!pack_cards.pack && ptr[i].type & TEXTURE_CARDS)
+        if (!pack_cards.pack && ptr[i].type & ASSET_CARDS)
         {
-            pacman_set_current(ptr[i], TEXTURE_CARDS);
+            pacman_set_current(ptr[i], ASSET_CARDS);
         }
     }
 }
@@ -212,10 +214,10 @@ PackPointer *pacman_list_packs(int *count)
         for (int j = 0; j < names_count; j++)
         {
             char *name = names[j];
-            Textures *textures = textures_find(pack, name);
+            Assets *assets = assets_find(pack, name);
             strcpy(results[*count].name, pack->name);
             strcpy(results[*count].texture_name, name);
-            results[*count].type = textures->type;
+            results[*count].type = assets->type;
             (*count)++;
         }
     }
@@ -237,19 +239,19 @@ TexturePack *pacman_find_pack(char *name)
     return NULL;
 }
 
-CurrentPack *pacman_current_pack(TextureType type)
+CurrentPack *pacman_current_pack(AssetType type)
 {
     switch (type)
     {
-    case TEXTURE_BACKGROUNDS:
+    case ASSET_BACKGROUNDS:
     {
         return &pack_background;
     }
-    case TEXTURE_BACKS:
+    case ASSET_BACKS:
     {
         return &pack_backs;
     }
-    case TEXTURE_CARDS:
+    case ASSET_CARDS:
     {
         return &pack_cards;
     }
@@ -258,25 +260,25 @@ CurrentPack *pacman_current_pack(TextureType type)
     return NULL;
 }
 
-void pacman_set_current(PackPointer pointer, TextureType as)
+void pacman_set_current(PackPointer pointer, AssetType as)
 {
     CurrentPack *target = pacman_current_pack(as);
 
     target->pointer = pointer;
     target->pack = pacman_find_pack(pointer.name);
-    target->textures = textures_find(target->pack, pointer.texture_name);
+    target->assets = assets_find(target->pack, pointer.texture_name);
 
     config_push_pack(target->config, pointer.name, pointer.texture_name);
     config_save();
 
-    if (as == TEXTURE_CARDS)
+    if (as == ASSET_CARDS)
     {
         layout_pack_changed();
         cards_invalidate_all();
     }
 }
 
-TexturePack *pacman_get_current(TextureType type)
+TexturePack *pacman_get_current(AssetType type)
 {
     CurrentPack *current = pacman_current_pack(type);
 
@@ -288,7 +290,7 @@ TexturePack *pacman_get_current(TextureType type)
     return current->pack;
 }
 
-Textures *pacman_get_current_textures(TextureType type)
+Assets *pacman_get_current_assets(AssetType type)
 {
     CurrentPack *current = pacman_current_pack(type);
 
@@ -297,5 +299,5 @@ Textures *pacman_get_current_textures(TextureType type)
         return NULL;
     }
 
-    return current->textures;
+    return current->assets;
 }
