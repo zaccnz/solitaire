@@ -139,6 +139,47 @@ void anim_update()
     }
 }
 
+void anim_render()
+{
+    Animation *animation = NULL;
+    float delta = GetFrameTime();
+    for (int i = 0; i < ANIMATION_MAX; i++)
+    {
+        if (!animations[i])
+        {
+            continue;
+        }
+
+        animation = animations[i];
+        int looping = (animation->config.duration - 0.0f < 0.0001);
+        if (animation->config.on_render)
+        {
+            animation->config.on_render(looping ? delta : animation->elapsed / animation->config.duration, animation->config.data);
+        }
+    }
+}
+
+void anim_resize()
+{
+    Animation *animation = NULL;
+    float delta = GetFrameTime();
+    int sw = GetScreenWidth(), sh = GetScreenHeight();
+
+    for (int i = 0; i < ANIMATION_MAX; i++)
+    {
+        if (!animations[i])
+        {
+            continue;
+        }
+
+        animation = animations[i];
+        if (animation->config.on_resize)
+        {
+            animation->config.on_resize(sw, sh, animation->config.data);
+        }
+    }
+}
+
 void anim_release()
 {
     for (int i = 0; i < ANIMATION_MAX; i++)

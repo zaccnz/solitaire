@@ -19,6 +19,8 @@ int card_height = 124;
 
 int card_gap_x = 6;
 
+int table_width = 0;
+
 float card_vertical_spacing = 0.25f;
 float card_aspect_ratio = 1.0f / 1.5f;
 
@@ -37,6 +39,8 @@ void layout_resize()
     card_width = CLOSEST_MULT(card_width, 5);
     card_height = card_width / card_aspect_ratio;
     card_gap_x = CLOSEST_MULT(card_width * 0.1, 2);
+
+    table_width = (card_width + card_gap_x) * 7 - card_gap_x;
 
     cards_invalidate_all();
 }
@@ -61,11 +65,13 @@ void layout_position_foundation(CalcOut *out, int index)
 {
     int hw = width / 2;
     *out = (CalcOut){
-        .x = hw - (float)(card_width + card_gap_x) * 3.5 + index * (card_width + card_gap_x),
-        .y = 10,
+        .x = hw - (table_width / 2),
+        .y = 70,
         .width = card_width,
         .height = card_height,
     };
+
+    out->x += index * (card_width + card_gap_x);
 }
 
 void layout_position_tableu(CalcOut *out, Coordinate index)
@@ -73,8 +79,8 @@ void layout_position_tableu(CalcOut *out, Coordinate index)
     int hw = width / 2;
     int hh = height / 2;
     *out = (CalcOut){
-        .x = hw - (float)(card_width + card_gap_x) * 3.5f,
-        .y = 10 + (float)(card_height * 1.5),
+        .x = hw - (table_width / 2),
+        .y = 90 + (card_height),
         .width = card_width,
         .height = card_height,
     };
@@ -87,8 +93,8 @@ void layout_position_talon(CalcOut *out, int index)
 {
     int hw = width / 2;
     *out = (CalcOut){
-        .x = hw + (float)(card_width * 2) - (index * (float)card_width * 0.5),
-        .y = 10,
+        .x = hw + (table_width / 2) - (card_width * 2 + card_gap_x) - ((index - 1) * (float)card_width * 0.5),
+        .y = 70,
         .width = card_width,
         .height = card_height,
     };
@@ -98,8 +104,8 @@ void layout_position_stock(CalcOut *out)
 {
     int hw = width / 2;
     *out = (CalcOut){
-        .x = hw + (float)(card_width * 3.5) - card_width,
-        .y = 10,
+        .x = hw + (table_width / 2) - card_width,
+        .y = 70,
         .width = card_width,
         .height = card_height,
     };
@@ -126,4 +132,9 @@ void layout_calculate(LayoutPosition pos, void *data, CalcOut *out)
     default:
         break;
     }
+}
+
+int layout_width()
+{
+    return table_width;
 }

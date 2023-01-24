@@ -4,11 +4,15 @@
 #pragma once
 
 typedef int (*AnimationUpdate)(float progress, void *data);
+typedef int (*AnimationRender)(float progress, void *data);
+typedef int (*AnimationResize)(int width, int height, void *data);
 typedef int (*AnimationCleanup)(int completed, void *data);
 
 typedef struct AnimationConfig
 {
     AnimationUpdate on_update;
+    AnimationRender on_render;
+    AnimationResize on_resize;
     AnimationCleanup on_cleanup;
     float duration;
     void *data;
@@ -31,8 +35,10 @@ int anim_cancel(AnimationPointer animation);
 
 void anim_clear_all();
 
-// TODO: anim render? create animations of custom sprites, self contained
 void anim_update();
+void anim_render();
+void anim_resize();
+
 void anim_release();
 
 void *anim_get_data(AnimationPointer animation);

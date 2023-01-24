@@ -38,3 +38,5 @@ void layout_resize();
 void layout_pack_changed();
 void layout_cardsize(int *width, int *height);
 void layout_calculate(LayoutPosition pos, void *data, CalcOut *out);
+
+int layout_width();

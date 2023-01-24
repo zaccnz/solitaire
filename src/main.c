@@ -43,7 +43,7 @@ int main(int argc, char **argv)
     audio_init();
     cards_init();
     scene_push(&MenuScene);
-    scene_push(&GameScene); // TODO: remove when complete
+    // scene_push(&GameScene); // TODO: remove when complete
     layout_resize();
 
     // main loop
@@ -61,6 +61,7 @@ int main(int argc, char **argv)
             config.window_size.height = GetScreenHeight();
             config_save();
             layout_resize();
+            anim_resize();
         }
 
         scene_update(GetFrameTime());
@@ -80,6 +81,7 @@ int main(int argc, char **argv)
         }
 
         scene_render(ctx);
+        anim_render();
         DrawNuklear(ctx);
 
         EndDrawing();

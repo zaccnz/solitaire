@@ -9,11 +9,35 @@
 #include "solitaire.h"
 
 #include <raylib.h>
+#include <raylib-nuklear.h>
 #include <stdio.h>
 
 #define AUTO_COMPLETE_TIMEOUT 0.2f
 
 Solitaire solitaire;
+
+Font score_font;
+Font score_header_font;
+
+typedef enum UIICONS
+{
+    ICON_UNDO = 0,
+    ICON_REDO,
+    ICON_NEW_GAME,
+    ICON_LEADERBOARD,
+    ICON_SETTINGS,
+    ICON_MAX,
+} UI_Icons;
+
+const char *ICON_DIRECTORY = "res/tex/Icon";
+const char *ICON_FILENAMES[ICON_MAX] = {
+    "undo-circular-arrow.png",
+    "redo-arrow-symbol.png",
+    "plus.png",
+    "podium.png",
+    "gear.png",
+};
+struct nk_image nk_icons[ICON_MAX];
 
 int auto_completing = 0.0f;
 float auto_complete_timer = 0.0f;
@@ -22,6 +46,8 @@ float ten_second_timer = 0.0f;
 
 int show_autocomplete_window = 0;
 int hide_autocomplete_window = 0;
+
+int skip_hold = 0;
 
 void game_new_deal(int seed)
 {
@@ -53,17 +79,44 @@ void game_new_deal(int seed)
 
 void start()
 {
+    char path[2048];
+    for (int i = 0; i < ICON_MAX; i++)
+    {
+        snprintf(path, 2048, "%s/%s", ICON_DIRECTORY, ICON_FILENAMES[i]);
+        nk_icons[i] = LoadNuklearImage(path);
+    }
+
+    score_font = LoadFontEx("res/font/roboto/Roboto-Medium.ttf", 30, 0, 250);
+    score_header_font = LoadFontEx("res/font/roboto/Roboto-Medium.ttf", 18, 0, 250);
+
     game_new_deal(0);
 }
 
 void stop()
 {
+    UnloadFont(score_font);
+    UnloadFont(score_header_font);
+
+    for (int i = 0; i < ICON_MAX; i++)
+    {
+        UnloadNuklearImage(nk_icons[i]);
+    }
     solitaire_free(&solitaire);
+}
+
+void play()
+{
+    skip_hold = 1;
 }
 
 void update(float dt, int background)
 {
-    cards_update(&solitaire, background || auto_completing);
+    cards_update(&solitaire, background || auto_completing, skip_hold);
+
+    if (IsMouseButtonUp(MOUSE_BUTTON_LEFT))
+    {
+        skip_hold = 0;
+    }
 
     if (background)
     {
@@ -102,6 +155,11 @@ void update(float dt, int background)
 
     int can_auto_complete = solitaire_can_auto_complete(&solitaire);
 
+    if (can_auto_complete && !show_autocomplete_window && !hide_autocomplete_window)
+    {
+        show_autocomplete_window = 1;
+    }
+
     if (can_auto_complete && IsKeyPressed(KEY_C))
     {
         auto_completing = 1;
@@ -125,6 +183,7 @@ void update(float dt, int background)
 
     if (solitaire_is_complete(&solitaire) && did_complete == 0)
     {
+        animation_game_end();
         solitaire.score.points += solitaire_score_move(&solitaire, SCORE_FINISH_GAME, NULL, NULL);
         leaderboard_submit(solitaire.config.seed, solitaire.score.points,
                            (int)solitaire.score.elapsed, solitaire.score.user_moves);
@@ -132,10 +191,26 @@ void update(float dt, int background)
     }
 }
 
-void render(struct nk_context *ctx)
+void game_render_text_centered(char *text, int x, int y, Font font, float size)
 {
-    cards_render(&solitaire, ctx);
-    debug_render(ctx, &solitaire);
+    Vector2 dim = MeasureTextEx(font, text, size, 0);
+    dim.x = x - (dim.x / 2);
+    dim.y = y;
+    DrawTextEx(font, text, dim, size, 0, BLACK);
+}
+
+void game_render_score(int sw, int sh)
+{
+    int width = layout_width();
+    Rectangle backdrop = {
+        .x = (sw - width) / 2,
+        .y = 10,
+        .width = width,
+        .height = 50,
+    };
+    DrawRectangleRounded(backdrop, 0.5, 20, ColorAlpha(WHITE, 0.8));
+
+    int columns = width / 4;
 
     // TODO: render text with font, and use layout system to get position
     char text[2048];
@@ -144,42 +219,41 @@ void render(struct nk_context *ctx)
     {
         float elapsed = solitaire.score.elapsed;
 
-        snprintf(text, 2048, "Time: %d:%02d", (int)(elapsed / 60), (int)(elapsed) % 60);
-        DrawText(text, 10, 510, 16, GRAY);
+        game_render_text_centered("Time", backdrop.x + columns * 2, 12, score_header_font, 18);
+        snprintf(text, 2048, "%d:%02d", (int)(elapsed / 60), (int)(elapsed) % 60);
+        game_render_text_centered(text, backdrop.x + columns * 2, 28, score_font, 30);
     }
 
-    snprintf(text, 2048, "Moves: %d", solitaire.score.user_moves);
-    DrawText(text, 10, 526, 16, GRAY);
+    game_render_text_centered("Moves", backdrop.x + columns, 12, score_header_font, 18);
+    snprintf(text, 2048, "%d", solitaire.score.user_moves);
+    game_render_text_centered(text, backdrop.x + columns, 28, score_font, 30);
 
-    snprintf(text, 2048, "Score: %d", solitaire.score.points);
-    DrawText(text, 10, 542, 16, GRAY);
+    game_render_text_centered("Score", backdrop.x + columns * 3, 12, score_header_font, 18);
+    snprintf(text, 2048, "%d", solitaire.score.points);
+    game_render_text_centered(text, backdrop.x + columns * 3, 28, score_font, 30);
+}
 
-    int sw = GetScreenWidth(), sh = GetScreenHeight();
-
-    int action_width = min(sw - 20, 300);
-    int action_height = min(sh - 40, 250);
-
-    struct nk_rect action_bounds = nk_rect((sw - action_width) / 2,
-                                           (sh - action_height) / 2,
-                                           action_width,
-                                           action_height);
-
-    if (solitaire_is_complete(&solitaire) && nk_begin(ctx, "Game Complete", action_bounds, NULL))
+void game_nk_gameover(struct nk_context *ctx, struct nk_rect action_bounds)
+{
+    if (nk_begin(ctx, "Game Complete", action_bounds, NULL))
     {
         nk_layout_row_dynamic(ctx, 40, 1);
         nk_label(ctx, "Congratulations", NK_TEXT_ALIGN_MIDDLE | NK_TEXT_ALIGN_CENTERED);
 
-        nk_layout_row_dynamic(ctx, 24, 1);
-        nk_label(ctx, "Game Completed", NK_TEXT_ALIGN_LEFT);
+        nk_layout_row_dynamic(ctx, 24, 2);
+        nk_spacing(ctx, 2);
         if (solitaire.config.timed)
         {
             float elapsed = solitaire.score.elapsed;
-            nk_labelf(ctx, NK_TEXT_ALIGN_LEFT, "Time: %d:%02d",
+            nk_label(ctx, "Time:", NK_TEXT_ALIGN_RIGHT);
+            nk_labelf(ctx, NK_TEXT_ALIGN_LEFT, " %d:%02d",
                       (int)(elapsed / 60), (int)(elapsed) % 60);
         }
 
-        nk_labelf(ctx, NK_TEXT_ALIGN_LEFT, "Score: %d", solitaire.score.points);
-        nk_labelf(ctx, NK_TEXT_ALIGN_LEFT, "Moves: %d", solitaire.score.user_moves);
+        nk_label(ctx, "Score:", NK_TEXT_ALIGN_RIGHT);
+        nk_labelf(ctx, NK_TEXT_ALIGN_LEFT, " %d", solitaire.score.points);
+        nk_label(ctx, "Moves:", NK_TEXT_ALIGN_RIGHT);
+        nk_labelf(ctx, NK_TEXT_ALIGN_LEFT, " %d", solitaire.score.user_moves);
 
         nk_layout_row_dynamic(ctx, 30, 1);
         nk_spacer(ctx);
@@ -190,13 +264,11 @@ void render(struct nk_context *ctx)
 
         nk_end(ctx);
     }
+}
 
-    if (solitaire_can_auto_complete(&solitaire) && !show_autocomplete_window && !hide_autocomplete_window)
-    {
-        show_autocomplete_window = 1;
-    }
-
-    if (show_autocomplete_window && nk_begin(ctx, "Autocomplete", action_bounds, NULL))
+void game_nk_autocomplete(struct nk_context *ctx, struct nk_rect action_bounds)
+{
+    if (nk_begin(ctx, "Autocomplete", action_bounds, NULL))
     {
         nk_layout_row_dynamic(ctx, 10, 1);
         nk_spacer(ctx);
@@ -224,26 +296,122 @@ void render(struct nk_context *ctx)
 
         nk_end(ctx);
     }
+}
 
-    int ctrl_height = 80;
+void game_nk_controls(struct nk_context *ctx, int sw, int sh)
+{
     int ctrl_pad = 10;
-    int ctrl_width = min(sw - (ctrl_pad * 2), 500);
+    int ctrl_width = layout_width();
+    int ctrl_height = 80;
+    if (ctrl_width < 80 * 5)
+    {
+        ctrl_height = 60;
+    }
+    if (ctrl_width < 60 * 5)
+    {
+        ctrl_height = 40;
+    }
 
     struct nk_rect control_bounds = nk_rect((sw - ctrl_width) / 2,
                                             sh - ctrl_height - ctrl_pad,
                                             ctrl_width,
                                             ctrl_height);
 
-    if (nk_begin(ctx, "Game Controls", control_bounds, NULL))
+    int icon_width = ctrl_height - 10;
+
+    int divider = max((ctrl_width - (icon_width + 6) * 5) / 2, 0);
+
+    float column_widths[7] = {
+        icon_width,
+        icon_width,
+        divider,
+        icon_width,
+        divider,
+        icon_width,
+        icon_width,
+    };
+
+    nk_style_push_color(ctx, &ctx->style.window.background, nk_rgba(0, 0, 0, 255));
+    nk_style_push_style_item(ctx, &ctx->style.window.fixed_background, nk_style_item_color(nk_rgba(0, 0, 0, 0)));
+
+    nk_style_push_style_item(ctx, &ctx->style.button.normal, nk_style_item_color(nk_rgba(255, 255, 255, (0.8 * 255.0))));
+    nk_style_push_style_item(ctx, &ctx->style.button.hover, nk_style_item_color(nk_rgba(240, 240, 240, (0.8 * 255.0))));
+    nk_style_push_style_item(ctx, &ctx->style.button.active, nk_style_item_color(nk_rgba(200, 200, 200, (0.8 * 255.0))));
+    nk_style_push_color(ctx, &ctx->style.button.border_color, nk_rgba(0, 0, 0, 0));
+    if (nk_begin(ctx, "Game Controls", control_bounds, NK_WINDOW_NO_SCROLLBAR))
     {
-        nk_layout_row_dynamic(ctx, ctrl_height - 20, 4);
+        nk_layout_row(ctx, NK_STATIC, ctrl_height - 10, 7, column_widths);
+        if (nk_button_image(ctx, nk_icons[ICON_UNDO]))
+        {
+            solitaire_undo(&solitaire);
+        }
+
+        if (nk_button_image(ctx, nk_icons[ICON_REDO]))
+        {
+            solitaire_redo(&solitaire);
+        }
+
+        nk_spacer(ctx);
+
+        if (nk_button_image(ctx, nk_icons[ICON_NEW_GAME]))
+        {
+            game_new_deal(0);
+        }
+
+        nk_spacer(ctx);
+
+        if (nk_button_image(ctx, nk_icons[ICON_LEADERBOARD]))
+        {
+            scene_push(&LeaderboardScene);
+        }
+
+        if (nk_button_image(ctx, nk_icons[ICON_SETTINGS]))
+        {
+            scene_push(&SettingsScene);
+        }
         nk_end(ctx);
+    }
+    nk_style_pop_style_item(ctx);
+    nk_style_pop_style_item(ctx);
+    nk_style_pop_style_item(ctx);
+    nk_style_pop_color(ctx);
+    nk_style_pop_style_item(ctx);
+    nk_style_pop_color(ctx);
+}
+
+void render(struct nk_context *ctx)
+{
+    int sw = GetScreenWidth(), sh = GetScreenHeight();
+    int action_width = min(sw - 20, 300);
+    int action_height = min(sh - 40, 250);
+
+    struct nk_rect action_bounds = nk_rect((sw - action_width) / 2,
+                                           (sh - action_height) / 2,
+                                           action_width,
+                                           action_height);
+
+    game_render_score(sw, sh);
+
+    cards_render(&solitaire, ctx);
+    debug_render(ctx, &solitaire);
+
+    game_nk_controls(ctx, sw, sh);
+
+    if (solitaire_is_complete(&solitaire))
+    {
+        game_nk_gameover(ctx, action_bounds);
+    }
+
+    if (show_autocomplete_window)
+    {
+        game_nk_autocomplete(ctx, action_bounds);
     }
 }
 
 const Scene GameScene = {
     .start = start,
     .stop = stop,
+    .play = play,
     .update = update,
     .render = render,
 };

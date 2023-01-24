@@ -339,7 +339,7 @@ void cards_on_drop(Solitaire *solitaire, CardSprite *target)
     }
 }
 
-void cards_update(Solitaire *solitaire, int background)
+void cards_update(Solitaire *solitaire, int background, int skip_hold)
 {
     cards_position_sprites(solitaire, 1);
 
@@ -351,16 +351,20 @@ void cards_update(Solitaire *solitaire, int background)
     int down = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
     int released = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
 
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+    if (down && skip_hold)
     {
-        held = 0;
+        return;
     }
-    else if (down)
+    else
+    {
+        skip_hold = 0;
+    }
+
+    if (down)
     {
         held += GetFrameTime();
     }
-
-    if (!down && !released)
+    else if (!released)
     {
         return;
     }
@@ -431,6 +435,8 @@ void cards_update(Solitaire *solitaire, int background)
             free(dnd);
             dnd = NULL;
         }
+
+        held = 0.0f;
     }
 }
 

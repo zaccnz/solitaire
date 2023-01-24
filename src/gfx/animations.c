@@ -2,9 +2,12 @@
 
 #include "gfx/animator.h"
 #include "gfx/cards.h"
+#include "gfx/layout.h"
 #include "io/config.h"
+#include "io/pacman.h"
 #include "util/unitbezier.h"
 
+#include <raylib.h>
 #include <stdlib.h>
 #include <math.h>
 
@@ -113,6 +116,7 @@ void animation_move_card_to(Solitaire *solitaire, int card, int behind, float de
 
 void animation_deal(Solitaire *solitaire)
 {
+    int sw = GetScreenWidth(), sh = GetScreenHeight();
     int width, height;
     layout_cardsize(&width, &height);
 
@@ -127,15 +131,22 @@ void animation_deal(Solitaire *solitaire)
     {
         positions_x[i] = cards[i].x;
         positions_y[i] = cards[i].y;
-        cards[i].x = -width;
-        cards[i].y = -height;
+        cards[i].x = (sw - width) / 2;
+        cards[i].y = sh + height;
     }
 
     // play deal animation (call on game created)
     for (int i = 0; i < MAX_CARDS; i++)
     {
         float delay = 0.0f;
-        delay += cards[i].index * 0.2f;
+        if (cards[i].flags & FLAGS_TABLEU)
+        {
+            delay = cards[i].index * 0.2f + 0.2f;
+        }
+        else if (cards[i].flags & FLAGS_STOCK)
+        {
+            delay = (cards[i].zindex / 6) * 0.05f;
+        }
         animation_move_card_to(solitaire, i, 0, delay, positions_x[i], positions_y[i]);
     }
 }
@@ -411,4 +422,112 @@ void animation_move(Solitaire *solitaire, Move move, MoveData data, int undo)
         break;
     }
     }
+}
+
+/* STANDALONE ANIMATION HELPERS */
+int standalone_render(float progress, StandaloneAnimationData *data)
+{
+    Assets *card_assets = pacman_get_current_assets(ASSET_CARDS);
+    Texture tex = card_assets->cards[data->card];
+
+    Rectangle source = {
+        .x = 0,
+        .y = 0,
+        .width = tex.width,
+        .height = tex.height,
+    };
+
+    int cw, ch;
+    layout_cardsize(&cw, &ch);
+
+    Rectangle dest = {
+        .x = data->x,
+        .y = data->y,
+        .width = cw,
+        .height = ch,
+    };
+    DrawTexturePro(tex, source, dest, (Vector2){.x = 0.0f, .y = 0.0f}, 0.0f, WHITE);
+}
+
+void standalone_resize(int sw, int sh, StandaloneAnimationData *data)
+{
+    data->sw = sw;
+    data->sh = sh;
+}
+
+int standalone_cleanup(int complete, StandaloneAnimationData *data)
+{
+    free(data);
+}
+
+/* STANDALONE ANIMATION - MAIN MENU */
+int standalone_update_menu(float progress, StandaloneAnimationData *data)
+{
+    int cw, ch;
+    layout_cardsize(&cw, &ch);
+
+    data->elapsed += progress;
+
+    int card_pad = cw * 0.2f;
+    data->x = (data->sw - 4 * (cw + card_pad)) / 2 + (data->index * (cw + card_pad));
+    float fy = sin(data->elapsed) * 50.0 + (float)(data->sh - (ch * 3)) / 2.0;
+    data->y = fy;
+
+    return 1;
+}
+
+void animation_main_menu()
+{
+    int sw = GetScreenWidth(), sh = GetScreenHeight();
+    int cw, ch;
+    layout_cardsize(&cw, &ch);
+
+    int card_pad = cw * 0.2f;
+
+    for (int i = 0; i < SUIT_MAX; i++)
+    {
+        int card = i * VALUE_MAX + ACE;
+
+        StandaloneAnimationData *data = malloc(sizeof(StandaloneAnimationData));
+        data->card = card;
+        data->x = (sw - 4 * (cw + card_pad)) / 2 + (i * (cw + card_pad));
+        data->y = (sh - (ch * 3)) / 2;
+        data->elapsed = i * 0.5f;
+        data->sw = sw;
+        data->sh = sh;
+        data->index = i;
+
+        AnimationConfig cfg = {
+            .on_update = standalone_update_menu,
+            .on_render = standalone_render,
+            .on_resize = standalone_resize,
+            .on_cleanup = standalone_cleanup,
+            .duration = 0,
+            .data = data,
+        };
+
+        anim_create(cfg, NULL);
+    }
+}
+
+/* STANDALONE ANIMATION - GAME END ANIMATIONS */
+#define GAME_END_ANIMATION_COUNT 1
+
+void standalone_update_game_end_1(float progress, StandaloneAnimationData *data)
+{
+}
+
+const AnimationUpdate GAME_END_ANIMATIONS[GAME_END_ANIMATION_COUNT] = {
+    standalone_update_game_end_1,
+};
+const int GAME_END_ANIMATIONS_CARD_COUNT[GAME_END_ANIMATION_COUNT] = {
+    MAX_CARDS,
+};
+const Vector2 GAME_END_ANIMATIONS_CARD_START[GAME_END_ANIMATION_COUNT] = {
+    {.x = 0, .y = 0},
+};
+
+void animation_game_end()
+{
+    // pick random number 0<= n < GAME_END_ANIMATION_COUNT
 }

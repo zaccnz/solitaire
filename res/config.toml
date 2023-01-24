@@ -13,14 +13,15 @@ timed = true
   texture_name = "Default"
 
   [textures.backs]
-  pack = "8Bit Cards"
-  texture_name = "Blue"
+  pack = "Internal"
+  texture_name = "Green"
 
   [textures.cards]
-  pack = "8Bit Cards"
+  pack = "Internal"
   texture_name = "Default"
 
 [debug]
 render_hitboxes = false
 render_animation_list = false
+render_leaderboard_tool = false
 seed = 0
