@@ -2,8 +2,10 @@
 
 #include "gfx/cards.h"
 #include "io/config.h"
+#include "io/leaderboard.h"
 #include "util/util.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 
 void debug_render(struct nk_context *ctx, Solitaire *solitaire)

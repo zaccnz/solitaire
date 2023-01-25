@@ -1,7 +1,9 @@
 #include "gfx/animator.h"
 #include "gfx/background.h"
 #include "gfx/cards.h"
+#include "gfx/layout.h"
 #include "io/config.h"
+#include "io/licences.h"
 #include "io/leaderboard.h"
 #include "io/pacman.h"
 #include "scenes/scene.h"
@@ -12,6 +14,54 @@
 
 #define RAYLIB_NUKLEAR_IMPLEMENTATION
 #include <raylib-nuklear.h>
+
+// #define PLATFORM_WEB
+
+#if defined(PLATFORM_WEB)
+#include <emscripten/emscripten.h>
+#endif
+
+struct nk_context *ctx = NULL;
+
+void loop()
+{
+    /* UPDATE */
+    UpdateNuklear(ctx);
+
+    audio_update();
+    anim_update();
+
+    if (IsWindowResized())
+    {
+        config.window_size.width = GetScreenWidth();
+        config.window_size.height = GetScreenHeight();
+        config_save();
+        layout_resize();
+        anim_resize();
+    }
+
+    scene_update(GetFrameTime());
+
+    /* RENDER */
+    BeginDrawing();
+
+    Assets *bg_assets = pacman_get_current_assets(ASSET_BACKGROUNDS);
+    if (bg_assets->background.type == BACKGROUND_COLOUR)
+    {
+        ClearBackground(bg_assets->background.colour);
+    }
+    else
+    {
+        ClearBackground(RAYWHITE);
+        background_render(bg_assets);
+    }
+
+    scene_render(ctx);
+    anim_render();
+    DrawNuklear(ctx);
+
+    EndDrawing();
+}
 
 int main(int argc, char **argv)
 {
@@ -31,7 +81,7 @@ int main(int argc, char **argv)
     SetExitKey(KEY_NULL);
 
     Font font = LoadFontEx("res/font/roboto/Roboto-Medium.ttf", 20, 0, 250);
-    struct nk_context *ctx = InitNuklearEx(font, 20);
+    ctx = InitNuklearEx(font, 20);
     ctx->style.checkbox.cursor_hover = nk_style_item_color(nk_rgb(255, 255, 255));
     ctx->style.checkbox.cursor_normal = nk_style_item_color(nk_rgb(255, 255, 255));
 
@@ -46,46 +96,15 @@ int main(int argc, char **argv)
     // scene_push(&GameScene); // TODO: remove when complete
     layout_resize();
 
-    // main loop
+// main loop
+#if defined(PLATFORM_WEB)
+    emscripten_set_main_loop(loop, 0, 1);
+#else
     while (!WindowShouldClose())
     {
-        /* UPDATE */
-        UpdateNuklear(ctx);
-
-        audio_update();
-        anim_update();
-
-        if (IsWindowResized())
-        {
-            config.window_size.width = GetScreenWidth();
-            config.window_size.height = GetScreenHeight();
-            config_save();
-            layout_resize();
-            anim_resize();
-        }
-
-        scene_update(GetFrameTime());
-
-        /* RENDER */
-        BeginDrawing();
-
-        Assets *bg_assets = pacman_get_current_assets(ASSET_BACKGROUNDS);
-        if (bg_assets->background.type == BACKGROUND_COLOUR)
-        {
-            ClearBackground(bg_assets->background.colour);
-        }
-        else
-        {
-            ClearBackground(RAYWHITE);
-            background_render(bg_assets);
-        }
-
-        scene_render(ctx);
-        anim_render();
-        DrawNuklear(ctx);
-
-        EndDrawing();
+        loop();
     }
+#endif
 
     // cleanup game components
     anim_release();

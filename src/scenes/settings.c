@@ -333,7 +333,7 @@ void settings_render(struct nk_context *ctx)
     {
         nk_layout_row_begin(ctx, NK_STATIC, settings_height - 80, 2);
         nk_layout_row_push(ctx, menu_size - 20);
-        if (nk_group_begin(ctx, "menu", NULL))
+        if (nk_group_begin(ctx, "menu", 0))
         {
             settings_nk_menu_button(ctx, "Solitaire", PAGE_GAME, 1);
             settings_nk_menu_button(ctx, "Texture Packs", PAGE_TEXTURE_PACKS, 1);
@@ -369,7 +369,7 @@ void settings_render(struct nk_context *ctx)
             nk_group_end(ctx);
         }
         nk_layout_row_push(ctx, settings_panel_width + 20);
-        if (nk_group_begin(ctx, "settings", NULL))
+        if (nk_group_begin(ctx, "settings", 0))
         {
             switch (settings_page)
             {

@@ -6,6 +6,7 @@
 #include "io/config.h"
 #include "io/pacman.h"
 #include "util/unitbezier.h"
+#include "util/util.h"
 
 #include <raylib.h>
 #include <stdlib.h>
@@ -103,8 +104,8 @@ void animation_move_card_to(Solitaire *solitaire, int card, int behind, float de
     data->duration = delay + animation_length;
 
     AnimationConfig config = {
-        .on_update = animation_update,
-        .on_cleanup = animation_cleanup,
+        .on_update = (AnimationUpdate)animation_update,
+        .on_cleanup = (AnimationCleanup)animation_cleanup,
         .duration = delay + animation_length,
         .data = data,
     };
@@ -498,10 +499,10 @@ void animation_main_menu()
         data->index = i;
 
         AnimationConfig cfg = {
-            .on_update = standalone_update_menu,
-            .on_render = standalone_render,
-            .on_resize = standalone_resize,
-            .on_cleanup = standalone_cleanup,
+            .on_update = (AnimationUpdate)standalone_update_menu,
+            .on_render = (AnimationRender)standalone_render,
+            .on_resize = (AnimationResize)standalone_resize,
+            .on_cleanup = (AnimationCleanup)standalone_cleanup,
             .duration = 0,
             .data = data,
         };
@@ -518,7 +519,7 @@ void standalone_update_game_end_1(float progress, StandaloneAnimationData *data)
 }
 
 const AnimationUpdate GAME_END_ANIMATIONS[GAME_END_ANIMATION_COUNT] = {
-    standalone_update_game_end_1,
+    (AnimationUpdate)standalone_update_game_end_1,
 };
 const int GAME_END_ANIMATIONS_CARD_COUNT[GAME_END_ANIMATION_COUNT] = {
     MAX_CARDS,

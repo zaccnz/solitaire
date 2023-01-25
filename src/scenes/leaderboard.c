@@ -4,6 +4,7 @@
 
 #include <raylib.h>
 #include <raylib-nuklear.h>
+#include <stdio.h>
 
 int leaderboard_width;
 
@@ -58,7 +59,7 @@ void leaderboard_nk_score(struct nk_context *ctx, int index, LeaderboardEntry en
     nk_layout_row_push(ctx, 40);
     nk_labelf(ctx, NK_TEXT_ALIGN_MIDDLE | NK_TEXT_ALIGN_CENTERED, "%d", index + 1);
     nk_layout_row_push(ctx, leaderboard_width - 240);
-    if (nk_group_begin(ctx, "Leaderboard Entry", NULL))
+    if (nk_group_begin(ctx, "Leaderboard Entry", 0))
     {
         int entry_minutes = entry.time / 60;
         float entry_seconds = entry.time % 60;
@@ -70,7 +71,7 @@ void leaderboard_nk_score(struct nk_context *ctx, int index, LeaderboardEntry en
         nk_group_end(ctx);
     }
     nk_layout_row_push(ctx, 140);
-    if (nk_group_begin(ctx, "Leaderboard Button", NULL))
+    if (nk_group_begin(ctx, "Leaderboard Button", 0))
     {
         nk_layout_row_dynamic(ctx, 20, 1);
         nk_spacer(ctx);
@@ -119,7 +120,7 @@ void leaderboard_render(struct nk_context *ctx)
             nk_labelf(ctx, NK_TEXT_ALIGN_MIDDLE | NK_TEXT_ALIGN_CENTERED, "Top %d deal%s by score",
                       leaderboard.entry_count, leaderboard.entry_count == 1 ? "" : "s");
             nk_layout_row_dynamic(ctx, leaderboard_height - 300, 1);
-            if (nk_group_begin(ctx, "Leaderboard Top Scores", NULL))
+            if (nk_group_begin(ctx, "Leaderboard Top Scores", 0))
             {
                 for (int i = 0; i < leaderboard.entry_count; i++)
                 {

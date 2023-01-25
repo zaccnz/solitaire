@@ -2,6 +2,7 @@
 
 #include "io/config.h"
 
+#include <stdio.h>
 #include <raylib.h>
 
 #define SFX_QUEUE_MAX 512

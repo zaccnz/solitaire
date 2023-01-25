@@ -2,6 +2,8 @@
 
 #include "gfx/animations.h"
 #include "gfx/animator.h"
+#include "gfx/cards.h"
+#include "gfx/layout.h"
 #include "io/config.h"
 #include "io/leaderboard.h"
 #include "util/debug.h"
@@ -235,7 +237,7 @@ void game_render_score(int sw, int sh)
 
 void game_nk_gameover(struct nk_context *ctx, struct nk_rect action_bounds)
 {
-    if (nk_begin(ctx, "Game Complete", action_bounds, NULL))
+    if (nk_begin(ctx, "Game Complete", action_bounds, 0))
     {
         nk_layout_row_dynamic(ctx, 40, 1);
         nk_label(ctx, "Congratulations", NK_TEXT_ALIGN_MIDDLE | NK_TEXT_ALIGN_CENTERED);
@@ -268,7 +270,7 @@ void game_nk_gameover(struct nk_context *ctx, struct nk_rect action_bounds)
 
 void game_nk_autocomplete(struct nk_context *ctx, struct nk_rect action_bounds)
 {
-    if (nk_begin(ctx, "Autocomplete", action_bounds, NULL))
+    if (nk_begin(ctx, "Autocomplete", action_bounds, 0))
     {
         nk_layout_row_dynamic(ctx, 10, 1);
         nk_spacer(ctx);

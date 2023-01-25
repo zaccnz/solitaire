@@ -27,3 +27,11 @@ cd solitaire
 mkdir build && cd build
 cmake ..
 ```
+
+to compile for the web (using EMSCRIPTEN, after running emsdk_env script)
+```
+git clone https://github.com/zaccnz/solitaire --recurse-submodules
+cd solitaire
+emcmake cmake -S . -B build -DPLATFORM=We
+cmake --build build
+```

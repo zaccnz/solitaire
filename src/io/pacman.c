@@ -202,7 +202,7 @@ PackPointer *pacman_list_packs(int *count)
     {
         TexturePack *pack = &packs[i];
         int names_count;
-        char **names = pack_get_texture_names(pack, &names_count);
+        char **names = pack_get_asset_names(pack, &names_count);
         if (*count + names_count >= size - 1)
         {
             while (*count + names_count >= size - 1)

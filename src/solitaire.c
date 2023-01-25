@@ -511,51 +511,6 @@ int solitaire_auto_complete_move(Solitaire *solitaire)
     return 1;
 }
 
-int solitaire_find_move(Solitaire *solitaire, MoveFrom from, int from_x, int from_y, Move *move)
-{
-    MoveData *data = malloc(sizeof(MoveData));
-    memset(data, 0, sizeof(MoveData));
-
-    move->type = MOVE_CARD;
-    move->from = from;
-    move->from_x = from_x;
-    move->from_y = from_y;
-
-    for (int i = 0; i < SUIT_MAX; i++)
-    {
-        move->to = MOVE_TO_FOUNDATION;
-        move->to_x = i;
-        if (!solitaire_make_move_data(solitaire, move, data))
-        {
-            continue;
-        }
-        if (solitaire_validate_move(solitaire, move, data))
-        {
-            free(data);
-            return 1;
-        }
-    }
-
-    for (int i = 0; i < 7; i++)
-    {
-        move->to = MOVE_TO_TABLEU;
-        move->to_x = i;
-        if (!solitaire_make_move_data(solitaire, move, data))
-        {
-            continue;
-        }
-        if (solitaire_validate_move(solitaire, move, data))
-        {
-            free(data);
-            return 1;
-        }
-    }
-
-    free(data);
-
-    return 0;
-}
-
 int solitaire_validate_move(Solitaire *solitaire, Move *move, MoveData *data)
 {
     Card *onto = NULL;
@@ -700,6 +655,51 @@ int solitaire_make_move_data(Solitaire *solitaire, Move *move, MoveData *data)
     }
     }
     return 1;
+}
+
+int solitaire_find_move(Solitaire *solitaire, MoveFrom from, int from_x, int from_y, Move *move)
+{
+    MoveData *data = malloc(sizeof(MoveData));
+    memset(data, 0, sizeof(MoveData));
+
+    move->type = MOVE_CARD;
+    move->from = from;
+    move->from_x = from_x;
+    move->from_y = from_y;
+
+    for (int i = 0; i < SUIT_MAX; i++)
+    {
+        move->to = MOVE_TO_FOUNDATION;
+        move->to_x = i;
+        if (!solitaire_make_move_data(solitaire, move, data))
+        {
+            continue;
+        }
+        if (solitaire_validate_move(solitaire, move, data))
+        {
+            free(data);
+            return 1;
+        }
+    }
+
+    for (int i = 0; i < 7; i++)
+    {
+        move->to = MOVE_TO_TABLEU;
+        move->to_x = i;
+        if (!solitaire_make_move_data(solitaire, move, data))
+        {
+            continue;
+        }
+        if (solitaire_validate_move(solitaire, move, data))
+        {
+            free(data);
+            return 1;
+        }
+    }
+
+    free(data);
+
+    return 0;
 }
 
 int solitaire_make_move(Solitaire *solitaire, Move move)

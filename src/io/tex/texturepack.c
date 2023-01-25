@@ -609,7 +609,7 @@ int pack_load(const char *path, TexturePack *pack)
     }
     printf("====\n");
 
-    return pack;
+    return 1;
 }
 
 int pack_free(TexturePack *pack)
@@ -636,7 +636,7 @@ int pack_free(TexturePack *pack)
         free(pack->assets);
     }
 
-    return 0;
+    return 1;
 }
 
 Spritesheet *pack_get_spritesheet(TexturePack *pack, const char *spritesheet)
@@ -652,7 +652,7 @@ Spritesheet *pack_get_spritesheet(TexturePack *pack, const char *spritesheet)
     return NULL;
 }
 
-char **pack_get_texture_names(TexturePack *pack, int *count)
+char **pack_get_asset_names(TexturePack *pack, int *count)
 {
     char **names = malloc(sizeof(char *) * pack->assets_count);
     for (int i = 0; i < pack->assets_count; i++)

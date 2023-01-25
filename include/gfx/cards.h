@@ -45,9 +45,11 @@ extern int was_deal_stock;
 
 void cards_init();
 void cards_free();
-void cards_update(Solitaire *solitaire, int background);
+void cards_update(Solitaire *solitaire, int background, int skip_hold);
 void cards_render(Solitaire *solitaire, struct nk_context *ctx);
 
 void cards_position_sprites(Solitaire *solitaire, int animate);
 void cards_place_with_hitbox(CardSprite *card, Card *next, float card_vertical_spacing);
 void cards_invalidate_all();
+
+int card_to_index(Card *card);

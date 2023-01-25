@@ -1,6 +1,27 @@
 #include "io/tex/spritesheet.h"
 
 #include "io/tex/texturepack.h"
+#include "util/util.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+int spritesheet_validate(Spritesheet *spritesheet)
+{
+    /*
+        if (spritesheet->image.width / spritesheet->cols != pack->card_width)
+        {
+            printf("spritesheet %s does not have %d columns\n", spritesheet->name, spritesheet->cols);
+        }
+
+        if (spritesheet->image.height / spritesheet->rows != pack->card_height)
+        {
+            printf("spritesheet %s does not have %d rows\n", spritesheet->name, spritesheet->rows);
+        }
+    */
+    return 1;
+}
 
 int spritesheet_load_dimensions(Spritesheet *sheet, toml_array_t *dimensions)
 {
@@ -70,7 +91,7 @@ int spritesheet_load(Spritesheet *sheet, toml_table_t *toml, TexturePack *pack)
         return 0;
     }
 
-    if (!spritesheet_validate(sheet, pack))
+    if (!spritesheet_validate(sheet))
     {
         return 0;
     }
@@ -99,22 +120,6 @@ int spritesheet_load_all(toml_array_t *spritesheets, TexturePack *pack)
         spritesheet_load(spritesheet, spritesheet_toml, pack);
     }
 
-    return 1;
-}
-
-int spritesheet_validate(Spritesheet *spritesheet)
-{
-    /*
-        if (spritesheet->image.width / spritesheet->cols != pack->card_width)
-        {
-            printf("spritesheet %s does not have %d columns\n", spritesheet->name, spritesheet->cols);
-        }
-
-        if (spritesheet->image.height / spritesheet->rows != pack->card_height)
-        {
-            printf("spritesheet %s does not have %d rows\n", spritesheet->name, spritesheet->rows);
-        }
-    */
     return 1;
 }
 

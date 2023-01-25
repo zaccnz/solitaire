@@ -72,7 +72,6 @@ void background_render(Assets *bg_assets)
     }
     default:
     {
-        printf("invalid background type %d for rendering\n", bg_assets->background.type);
         break;
     }
     }

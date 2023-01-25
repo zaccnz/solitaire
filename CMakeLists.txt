@@ -1,11 +1,33 @@
 cmake_minimum_required(VERSION 3.15)
 project(solitaire)
 
+set(PHYSFS_ARCHIVE_ZIP ON CACHE BOOL "" FORCE)
+set(PHYSFS_ARCHIVE_7Z OFF CACHE BOOL "" FORCE)
+set(PHYSFS_ARCHIVE_GRP OFF CACHE BOOL "" FORCE)
+set(PHYSFS_ARCHIVE_WAD OFF CACHE BOOL "" FORCE)
+set(PHYSFS_ARCHIVE_HOG OFF CACHE BOOL "" FORCE)
+set(PHYSFS_ARCHIVE_MVL OFF CACHE BOOL "" FORCE)
+set(PHYSFS_ARCHIVE_QPAK OFF CACHE BOOL "" FORCE)
+set(PHYSFS_ARCHIVE_SLB OFF CACHE BOOL "" FORCE)
+set(PHYSFS_ARCHIVE_ISO9660 OFF CACHE BOOL "" FORCE)
+set(PHYSFS_ARCHIVE_VDF OFF CACHE BOOL "" FORCE)
+
+set(PHYSFS_BUILD_STATIC ON CACHE BOOL "" FORCE)
+set(PHYSFS_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+set(PHYSFS_BUILD_TEST OFF CACHE BOOL "" FORCE)
+set(PHYSFS_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(PHYSFS_DISABLE_INSTALL OFF CACHE BOOL "" FORCE)
+
 add_subdirectory(libs/physfs EXCLUDE_FROM_ALL)
 add_subdirectory(libs/raylib EXCLUDE_FROM_ALL)
 add_subdirectory(libs/raylib-nuklear EXCLUDE_FROM_ALL)
 
-set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD 99)
+
+if (EMSCRIPTEN)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s USE_GLFW=3 -s ASSERTIONS=1 -s WASM=1")
+  set(CMAKE_EXECUTABLE_SUFFIX ".html")
+endif ()
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 include_directories(${CMAKE_SOURCE_DIR}/libs/tomlc99)
@@ -41,6 +63,10 @@ add_executable(${PROJECT_NAME}
 )
 
 target_link_libraries(${PROJECT_NAME} raylib raylib_nuklear physfs-static)
+
+if (EMSCRIPTEN)
+  set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "--preload-file ${CMAKE_SOURCE_DIR}/res@/res --preload-file ${CMAKE_SOURCE_DIR}/packs@/packs")
+endif ()
 
 if (APPLE)
     target_link_libraries(${PROJECT_NAME} "-framework IOKit")

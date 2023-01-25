@@ -1,5 +1,8 @@
 #pragma once
 
+#include <raylib.h>
+#include <raylib-nuklear.h>
+
 typedef void (*Scene_StartFunc)();
 typedef void (*Scene_StopFunc)();
 typedef void (*Scene_PlayFunc)();
