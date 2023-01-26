@@ -106,7 +106,7 @@ void pacman_reload_packs()
 
         PHYSFS_unmount(path);
 
-        if (pack_count >= count)
+        if (pack_count >= count + 1)
         {
             printf("pacman: more packs then file entries?\n");
             break;
@@ -125,6 +125,7 @@ void pacman_reload_packs()
         pacman_set_current(pack_background.pointer, ASSET_BACKGROUNDS);
         pacman_set_current(pack_backs.pointer, ASSET_BACKS);
         pacman_set_current(pack_cards.pointer, ASSET_CARDS);
+        printf("current packs 1: %s %s %s\n", pack_background.pack->name, pack_backs.pack->name, pack_cards.pack->name);
 
         if (pack_background.pack && pack_backs.pack && pack_cards.pack)
         {
@@ -159,30 +160,38 @@ void pacman_reload_packs()
 
     if (pack_background.pack && pack_backs.pack && pack_cards.pack)
     {
+        printf("stopping with %s %s %s\n", pack_background.pack->name, pack_backs.pack->name, pack_cards.pack->name);
         // load from config success
         return;
     }
 
     // worst case: load the first possible pack
+    printf("continuing...\n");
     count = 0;
     PackPointer *ptr = pacman_list_packs(&count);
     for (int i = 0; i < count; i++)
     {
+        printf("testing %s %s\n", ptr->name, ptr->texture_name);
         if (!pack_background.pack && ptr[i].type & ASSET_BACKGROUNDS)
         {
+            printf("setting as bg\n");
             pacman_set_current(ptr[i], ASSET_BACKGROUNDS);
         }
 
         if (!pack_backs.pack && ptr[i].type & ASSET_BACKS)
         {
+            printf("setting as backs\n");
             pacman_set_current(ptr[i], ASSET_BACKS);
         }
 
         if (!pack_cards.pack && ptr[i].type & ASSET_CARDS)
         {
+            printf("setting as cards\n");
             pacman_set_current(ptr[i], ASSET_CARDS);
         }
     }
+    free(ptr);
+    printf("current packs 3: %s %s %s\n", pack_background.pack->name, pack_backs.pack->name, pack_cards.pack->name);
 }
 
 void pacman_free_packs()
@@ -264,9 +273,19 @@ void pacman_set_current(PackPointer pointer, AssetType as)
 {
     CurrentPack *target = pacman_current_pack(as);
 
+    TexturePack *pack = pacman_find_pack(pointer.name);
+    Assets *assets = assets_find(pack, pointer.texture_name);
+
+    if (!(assets->type & as))
+    {
+        return;
+    }
+
+    printf("setting %s %s as %d\n", pointer.name, pointer.texture_name, as);
+
     target->pointer = pointer;
-    target->pack = pacman_find_pack(pointer.name);
-    target->assets = assets_find(target->pack, pointer.texture_name);
+    target->pack = pack;
+    target->assets = assets;
 
     config_push_pack(target->config, pointer.name, pointer.texture_name);
     config_save();

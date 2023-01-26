@@ -8,14 +8,13 @@
 #include "io/pacman.h"
 #include "scenes/scene.h"
 #include "sfx/audio.h"
+#include "util/emscripten.h"
 
 #include <physfs.h>
 #include <raylib.h>
 
 #define RAYLIB_NUKLEAR_IMPLEMENTATION
 #include <raylib-nuklear.h>
-
-// #define PLATFORM_WEB
 
 #if defined(PLATFORM_WEB)
 #include <emscripten/emscripten.h>
@@ -65,6 +64,9 @@ void loop()
 
 int main(int argc, char **argv)
 {
+    // prepare IDBFS
+    emscripten_idbfs_prepare();
+
     // init utilities
     config_load();
     leaderboard_load();
@@ -90,13 +92,13 @@ int main(int argc, char **argv)
 
     // init game components
     pacman_reload_packs();
+    printf("hello world\n");
     audio_init();
     cards_init();
     scene_push(&MenuScene);
     // scene_push(&GameScene); // TODO: remove when complete
     layout_resize();
 
-// main loop
 #if defined(PLATFORM_WEB)
     emscripten_set_main_loop(loop, 0, 1);
 #else
@@ -126,5 +128,9 @@ int main(int argc, char **argv)
     licences_free();
     config_save();
     config_free();
+
+    // sync IDBFS
+    emscripten_idbfs_sync();
+
     return 0;
 }

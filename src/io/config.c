@@ -8,7 +8,13 @@
 #include <string.h>
 #include <toml.h>
 
-#define CFG_DEFAULT_PACK "SBS 2d Poker Pack"
+#if defined(PLATFORM_WEB)
+#define CONFIG_FILE_PATH "/cfg/config.toml"
+#else
+#define CONFIG_FILE_PATH "config.toml"
+#endif
+
+#define CFG_DEFAULT_PACK "Internal"
 #define CFG_DEFAULT_TEXTURE_NAME "Default"
 #define CFG_DEFAULT_TEXTURE_NAME_BACKS "Red"
 
@@ -83,6 +89,8 @@ int config_try_load_texture(
         return 0;
     }
     texture_struct->texture_name = texture_name.u.s;
+
+    return 1;
 }
 
 int config_try_load_textures(toml_table_t *textures)
@@ -238,11 +246,12 @@ void config_load()
     config_push_pack(&config.textures.backs, CFG_DEFAULT_PACK, CFG_DEFAULT_TEXTURE_NAME_BACKS);
     config_push_pack(&config.textures.cards, CFG_DEFAULT_PACK, CFG_DEFAULT_TEXTURE_NAME);
 
-    char *data = LoadFileText("res/config.toml");
+    char *data = LoadFileText(CONFIG_FILE_PATH);
+    printf("config_load()\n%s\n", data);
 
     if (!data)
     {
-        printf("failed to read res/config.toml\n");
+        printf("failed to read " CONFIG_FILE_PATH "\n");
         return;
     }
 
@@ -252,7 +261,7 @@ void config_load()
 
     if (!config_toml)
     {
-        printf("cannot parse res/config.toml: %s\n", errbuf);
+        printf("cannot parse " CONFIG_FILE_PATH ": %s\n", errbuf);
         return;
     }
 
@@ -345,6 +354,6 @@ void config_save()
     toml_writer_push_integer(writer, "seed", config.debug.seed);
     toml_writer_pop_key(writer);
 
-    toml_writer_save(writer, "res/config.toml");
+    toml_writer_save(writer, CONFIG_FILE_PATH);
     toml_writer_free(writer);
 }

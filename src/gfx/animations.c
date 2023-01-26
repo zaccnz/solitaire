@@ -448,6 +448,7 @@ int standalone_render(float progress, StandaloneAnimationData *data)
         .height = ch,
     };
     DrawTexturePro(tex, source, dest, (Vector2){.x = 0.0f, .y = 0.0f}, 0.0f, WHITE);
+    return 1;
 }
 
 void standalone_resize(int sw, int sh, StandaloneAnimationData *data)
@@ -459,6 +460,7 @@ void standalone_resize(int sw, int sh, StandaloneAnimationData *data)
 int standalone_cleanup(int complete, StandaloneAnimationData *data)
 {
     free(data);
+    return 1;
 }
 
 /* STANDALONE ANIMATION - MAIN MENU */

@@ -8,6 +8,12 @@
 #include <time.h>
 #include <toml.h>
 
+#if defined(PLATFORM_WEB)
+#define LEADERBOARD_FILE_PATH "/cfg/leaderboard.toml"
+#else
+#define LEADERBOARD_FILE_PATH "leaderboard.toml"
+#endif
+
 const Leaderboard DEFAULT_LEADERBOARD = {
     .high_score = -1,
     .fastest_time = -1,
@@ -81,11 +87,11 @@ void leaderboard_load()
 {
     leaderboard = DEFAULT_LEADERBOARD;
 
-    char *data = LoadFileText("res/leaderboard.toml");
+    char *data = LoadFileText(LEADERBOARD_FILE_PATH);
 
     if (!data)
     {
-        printf("failed to read res/leaderboard.toml\n");
+        printf("failed to read " LEADERBOARD_FILE_PATH "\n");
         return;
     }
 
@@ -95,7 +101,7 @@ void leaderboard_load()
 
     if (!leaderboard_toml)
     {
-        printf("cannot parse - %s\n", errbuf);
+        printf("cannot parse " LEADERBOARD_FILE_PATH ": %s\n", errbuf);
         return;
     }
 
@@ -146,7 +152,7 @@ void leaderboard_save()
         toml_writer_pop_key(writer);
     }
 
-    toml_writer_save(writer, "res/leaderboard.toml");
+    toml_writer_save(writer, "cfg/leaderboard.toml");
     toml_writer_free(writer);
 }
 

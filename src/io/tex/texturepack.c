@@ -401,7 +401,7 @@ int pack_load_suit_or_values(TexturePack *pack, toml_table_t *card, Suit suit, V
     {
         if (row.u.i < 0 || row.u.i >= sheet->rows)
         {
-            printf("cards definition %s spritesheet has no row %d\n", toml_table_key(card), row.u.i);
+            printf("cards definition %s spritesheet has no row %lld\n", toml_table_key(card), row.u.i);
             return 0;
         }
         if (size != sheet->cols)
@@ -418,12 +418,12 @@ int pack_load_suit_or_values(TexturePack *pack, toml_table_t *card, Suit suit, V
     {
         if (column.u.i < 0 || column.u.i >= sheet->cols)
         {
-            printf("cards definition %s spritesheet has no column %d\n", toml_table_key(card), column.u.i);
+            printf("cards definition %s spritesheet has no column %lld\n", toml_table_key(card), column.u.i);
             return 0;
         }
         if (size != sheet->rows)
         {
-            printf("cards definition %s spritesheet has %d rows, cards has %d entries\n", sheet->rows, size);
+            printf("cards definition %s spritesheet has %d rows, cards has %d entries\n", toml_table_key(card), sheet->rows, size);
             return 0;
         }
         index = column.u.i;

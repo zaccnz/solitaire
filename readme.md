@@ -32,6 +32,6 @@ to compile for the web (using EMSCRIPTEN, after running emsdk_env script)
 ```
 git clone https://github.com/zaccnz/solitaire --recurse-submodules
 cd solitaire
-emcmake cmake -S . -B build -DPLATFORM=We
+emcmake cmake -S . -B build -DPLATFORM=Web
 cmake --build build
 ```

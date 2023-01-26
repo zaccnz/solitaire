@@ -25,7 +25,7 @@ add_subdirectory(libs/raylib-nuklear EXCLUDE_FROM_ALL)
 set(CMAKE_C_STANDARD 99)
 
 if (EMSCRIPTEN)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s USE_GLFW=3 -s ASSERTIONS=1 -s WASM=1")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s USE_GLFW=3 -s ASSERTIONS=1 -s WASM=1 -sASYNCIFY -s \"ASYNCIFY_IMPORTS=['emscripten_asm_const_int']\" -O3")
   set(CMAKE_EXECUTABLE_SUFFIX ".html")
 endif ()
 
@@ -55,6 +55,7 @@ add_executable(${PROJECT_NAME}
   src/scenes/settings.c
   src/sfx/audio.c
   src/util/debug.c
+  src/util/emscripten.c
   src/util/toml_writer.c
   src/util/unitbezier.c
   src/util/util.c
@@ -65,7 +66,7 @@ add_executable(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME} raylib raylib_nuklear physfs-static)
 
 if (EMSCRIPTEN)
-  set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "--preload-file ${CMAKE_SOURCE_DIR}/res@/res --preload-file ${CMAKE_SOURCE_DIR}/packs@/packs")
+  set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-lidbfs.js --preload-file ${CMAKE_SOURCE_DIR}/res@/res --preload-file ${CMAKE_SOURCE_DIR}/packs@/packs")
 endif ()
 
 if (APPLE)

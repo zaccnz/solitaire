@@ -118,7 +118,7 @@ void scene_update(float delta)
 
 int scene_is_on_stack(const Scene *scene)
 {
-    for (int i = 0; i < scene; i++)
+    for (int i = 0; i < scene_count; i++)
     {
         if (scenes[i] == scene)
         {

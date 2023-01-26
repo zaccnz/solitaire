@@ -48,6 +48,8 @@ int spritesheet_load_dimensions(Spritesheet *sheet, toml_array_t *dimensions)
 
     sheet->rows = rows.u.i;
     sheet->cols = columns.u.i;
+
+    return 1;
 }
 
 int spritesheet_load(Spritesheet *sheet, toml_table_t *toml, TexturePack *pack)

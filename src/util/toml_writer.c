@@ -1,10 +1,16 @@
 #include "util/toml_writer.h"
 
+#include "util/emscripten.h"
+
 #include <raylib.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#if defined(PLATFORM_WEB)
+#include <emscripten/emscripten.h>
+#endif
 
 #define BUFFER_INITIAL_SIZE 2048
 
@@ -30,6 +36,8 @@ int toml_writer_putc(TOML_Writer *writer, char character)
 {
     toml_writer_check_resize(writer, 1);
     writer->buffer[writer->buffer_len++] = character;
+
+    return 1;
 }
 
 int toml_writer_indent(TOML_Writer *writer)
@@ -39,6 +47,8 @@ int toml_writer_indent(TOML_Writer *writer)
     {
         toml_writer_putc(writer, ' ');
     }
+
+    return 1;
 }
 
 // note: please only write one line at a time, otherwise padding will be broken
@@ -108,7 +118,12 @@ void toml_writer_free(TOML_Writer *writer)
 
 int toml_writer_save(TOML_Writer *writer, char *filename)
 {
-    return SaveFileText(filename, writer->buffer);
+    int result = SaveFileText(filename, writer->buffer);
+    printf("toml_writer_save()\n%s\n", writer->buffer);
+
+    emscripten_idbfs_sync();
+
+    return result;
 }
 
 int toml_writer_push_key(TOML_Writer *writer, char *key, int array)
@@ -155,7 +170,7 @@ int toml_writer_push_key(TOML_Writer *writer, char *key, int array)
 
     const char *FORMAT_STRING = array ? "[[%s]]\n" : "[%s]\n";
     toml_writer_indent(writer);
-    toml_writer_printf(writer, FORMAT_STRING, &full_key[full_key_ptr]);
+    toml_writer_printf(writer, (char *)FORMAT_STRING, &full_key[full_key_ptr]);
 
     return 1;
 }
@@ -181,6 +196,7 @@ int toml_writer_push_value_array(TOML_Writer *writer, char *key)
 {
     writer->is_writing_value_array = 1;
     toml_writer_printf(writer, "%s = [", key);
+    return 1;
 }
 
 int toml_writer_pop_value_array(TOML_Writer *writer)

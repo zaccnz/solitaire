@@ -129,7 +129,7 @@ void settings_update(float dt, int background)
     }
 }
 
-int settings_nk_draw_dropdown(struct nk_context *ctx, char *name, AssetType type, struct DropdownData *data)
+void settings_nk_draw_dropdown(struct nk_context *ctx, char *name, AssetType type, struct DropdownData *data)
 {
     nk_label(ctx, name, NK_TEXT_LEFT);
     nk_layout_row_static(ctx, 25, 200, 1);
