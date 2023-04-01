@@ -43,9 +43,15 @@ void menu_render(struct nk_context *ctx)
     DrawTextEx(header_font, "solitaire", (Vector2){.x = (sw - size.x) / 2, .y = 50}, 50, 0.0f, BLACK);
 
     int menu_width = min(sw - 20, 300);
-    int menu_height = 250;
+    int button_count = 4;
+#if defined(PLATFORM_WEB)
+    button_count = 3;
+#endif
+    int border_bottom = (sh < 600) ? 20 : 100;
+    int menu_height = button_count * 60;
 
-    struct nk_rect menu_rect = nk_rect((sw - menu_width) / 2, sh - menu_height - 100,
+    struct nk_rect menu_rect = nk_rect((sw - menu_width) / 2,
+                                       sh - menu_height - border_bottom,
                                        menu_width, menu_height);
 
     nk_style_push_color(ctx, &ctx->style.window.background, nk_rgba(0, 0, 0, 255));
@@ -53,8 +59,6 @@ void menu_render(struct nk_context *ctx)
 
     if (nk_begin(ctx, "Menu", menu_rect, 0))
     {
-        nk_layout_row_dynamic(ctx, 10, 1);
-        nk_spacer(ctx);
         nk_layout_row_dynamic(ctx, 40, 1);
         if (nk_button_label(ctx, "play"))
         {
@@ -76,7 +80,7 @@ void menu_render(struct nk_context *ctx)
         {
             scene_push(&LeaderboardScene);
         }
-
+#ifndef PLATFORM_WEB
         nk_layout_row_dynamic(ctx, 10, 1);
         nk_spacer(ctx);
         nk_layout_row_dynamic(ctx, 40, 1);
@@ -84,6 +88,7 @@ void menu_render(struct nk_context *ctx)
         {
             scene_pop_all();
         }
+#endif
         nk_end(ctx);
     }
 

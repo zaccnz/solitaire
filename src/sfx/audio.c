@@ -7,6 +7,9 @@
 
 #define SFX_QUEUE_MAX 512
 
+#define SFX_PATH "res/sfx/"
+#define SFX_PATH_KENNEY SFX_PATH "kenney/"
+
 typedef struct SFX_Config
 {
     SFX sound;
@@ -23,8 +26,16 @@ typedef struct SFX_Queued
 const SFX_Config SFX_CONFIGS[] = {
     {
         .sound = SFX_DRAW_CARD,
-        .path = "res/sfx/olex_mazur/Cards/Select/GP_Select_1.wav",
-        .volume = 0.2,
+        .path = SFX_PATH_KENNEY "cardSlide2.ogg",
+        .volume = 0.7,
+    },
+    {
+        .sound = SFX_DEAL_CARD,
+        .path = SFX_PATH_KENNEY "cardPlace1.ogg",
+    },
+    {
+        .sound = SFX_GAME_WIN,
+        .path = SFX_PATH "gameWin.mp3",
     },
 };
 
@@ -42,7 +53,10 @@ void audio_init()
     {
         SFX_Config config = SFX_CONFIGS[i];
         Sound sound = LoadSound(config.path);
-        SetSoundVolume(sound, config.volume);
+        if (config.volume)
+        {
+            SetSoundVolume(sound, config.volume);
+        }
 
         sfx[config.sound] = sound;
         sfx_loaded[config.sound] = 1;

@@ -6,6 +6,7 @@
 #include "gfx/layout.h"
 #include "io/config.h"
 #include "io/leaderboard.h"
+#include "sfx/audio.h"
 #include "util/debug.h"
 #include "util/util.h"
 #include "solitaire.h"
@@ -185,6 +186,7 @@ void update(float dt, int background)
 
     if (solitaire_is_complete(&solitaire) && did_complete == 0)
     {
+        audio_play_sfx(SFX_GAME_WIN);
         animation_game_end();
         solitaire.score.points += solitaire_score_move(&solitaire, SCORE_FINISH_GAME, NULL, NULL);
         leaderboard_submit(solitaire.config.seed, solitaire.score.points,
@@ -203,16 +205,12 @@ void game_render_text_centered(char *text, int x, int y, Font font, float size)
 
 void game_render_score(int sw, int sh)
 {
-    int width = layout_width();
-    Rectangle backdrop = {
-        .x = (sw - width) / 2,
-        .y = 10,
-        .width = width,
-        .height = 50,
-    };
-    DrawRectangleRounded(backdrop, 0.5, 20, ColorAlpha(WHITE, 0.8));
+    CalcOut backdrop;
+    layout_calculate(LAYOUT_SCORE, NULL, &backdrop);
+    DrawRectangleRounded(layout_calcout_to_rayrect(backdrop),
+                         0.5, 20, ColorAlpha(WHITE, 0.8));
 
-    int columns = width / 4;
+    int columns = backdrop.width / 4;
 
     // TODO: render text with font, and use layout system to get position
     char text[2048];
@@ -302,26 +300,12 @@ void game_nk_autocomplete(struct nk_context *ctx, struct nk_rect action_bounds)
 
 void game_nk_controls(struct nk_context *ctx, int sw, int sh)
 {
-    int ctrl_pad = 10;
-    int ctrl_width = layout_width();
-    int ctrl_height = 80;
-    if (ctrl_width < 80 * 5)
-    {
-        ctrl_height = 60;
-    }
-    if (ctrl_width < 60 * 5)
-    {
-        ctrl_height = 40;
-    }
+    CalcOut control_bounds;
+    layout_calculate(LAYOUT_CONTROLS, NULL, &control_bounds);
 
-    struct nk_rect control_bounds = nk_rect((sw - ctrl_width) / 2,
-                                            sh - ctrl_height - ctrl_pad,
-                                            ctrl_width,
-                                            ctrl_height);
+    int icon_width = control_bounds.height - 10;
 
-    int icon_width = ctrl_height - 10;
-
-    int divider = max((ctrl_width - (icon_width + 6) * 5) / 2, 0);
+    int divider = max((control_bounds.width - (icon_width + 6) * 5) / 2, 0);
 
     float column_widths[7] = {
         icon_width,
@@ -340,9 +324,9 @@ void game_nk_controls(struct nk_context *ctx, int sw, int sh)
     nk_style_push_style_item(ctx, &ctx->style.button.hover, nk_style_item_color(nk_rgba(240, 240, 240, (0.8 * 255.0))));
     nk_style_push_style_item(ctx, &ctx->style.button.active, nk_style_item_color(nk_rgba(200, 200, 200, (0.8 * 255.0))));
     nk_style_push_color(ctx, &ctx->style.button.border_color, nk_rgba(0, 0, 0, 0));
-    if (nk_begin(ctx, "Game Controls", control_bounds, NK_WINDOW_NO_SCROLLBAR))
+    if (nk_begin(ctx, "Game Controls", layout_calcout_to_nkrect(control_bounds), NK_WINDOW_NO_SCROLLBAR))
     {
-        nk_layout_row(ctx, NK_STATIC, ctrl_height - 10, 7, column_widths);
+        nk_layout_row(ctx, NK_STATIC, control_bounds.height - 10, 7, column_widths);
         if (nk_button_image(ctx, nk_icons[ICON_UNDO]))
         {
             solitaire_undo(&solitaire);
@@ -384,13 +368,9 @@ void game_nk_controls(struct nk_context *ctx, int sw, int sh)
 void render(struct nk_context *ctx)
 {
     int sw = GetScreenWidth(), sh = GetScreenHeight();
-    int action_width = min(sw - 20, 300);
-    int action_height = min(sh - 40, 250);
-
-    struct nk_rect action_bounds = nk_rect((sw - action_width) / 2,
-                                           (sh - action_height) / 2,
-                                           action_width,
-                                           action_height);
+    CalcOut action_bounds_calc;
+    layout_calculate(LAYOUT_ACTION, NULL, &action_bounds_calc);
+    struct nk_rect action_bounds = layout_calcout_to_nkrect(action_bounds_calc);
 
     game_render_score(sw, sh);
 

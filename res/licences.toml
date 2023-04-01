@@ -348,3 +348,15 @@ PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
 OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
+
+[[licences]]
+name = "Flaticon Icons"
+author = "Freepik"
+source = "https://www.flaticon.com/authors/freepik"
+licence = """
+Using the following icons
+https://www.flaticon.com/free-icon/undo-circular-arrow_44426
+https://www.flaticon.com/free-icon/redo-arrow-symbol_44650
+https://www.flaticon.com/free-icon/podium_680771
+https://www.flaticon.com/free-icon/plus_748113
+https://www.flaticon.com/free-icon/gear_484613"""

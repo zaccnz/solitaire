@@ -3,7 +3,7 @@
 typedef enum SFX
 {
     SFX_DRAW_CARD = 0,
-    SFX_DEAL_CARDS,
+    SFX_DEAL_CARD,
     SFX_GAME_WIN,
     SFX_MAX,
 } SFX;

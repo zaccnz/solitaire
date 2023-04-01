@@ -5,6 +5,7 @@
 #include "gfx/layout.h"
 #include "io/config.h"
 #include "io/pacman.h"
+#include "sfx/audio.h"
 #include "util/unitbezier.h"
 #include "util/util.h"
 
@@ -46,6 +47,13 @@ int animation_update(float progress, CardAnimationData *data)
     return 1;
 }
 
+int animation_update_reveal(float progress, CardAnimationData *data)
+{
+    data->progress = progress;
+
+    return 1;
+}
+
 int animation_cleanup(int completed, CardAnimationData *data)
 {
     CardSprite *sprite = &cards[data->card];
@@ -54,7 +62,10 @@ int animation_cleanup(int completed, CardAnimationData *data)
         .generation = -1,
     };
     sprite->flags &= ~FLAGS_ANIMATING;
-    sprite->zindex = data->zindex;
+    if (!data->reveal)
+    {
+        sprite->zindex = data->zindex;
+    }
     sprite->x = data->to_x;
     sprite->y = data->to_y;
     free(data);
@@ -91,11 +102,13 @@ void animation_move_card_to(Solitaire *solitaire, int card, int behind, float de
 
     CardAnimationData *data = malloc(sizeof(CardAnimationData));
     data->card = card;
+    data->reveal = 0;
     data->from_x = sprite->x;
     data->from_y = sprite->y;
     data->to_x = to_x;
     data->to_y = to_y;
     data->delay = delay;
+    data->progress = 0;
     data->zindex = sprite->zindex;
 
     sprite->zindex = sprite->zindex + (behind ? 0 : 52);
@@ -142,12 +155,13 @@ void animation_deal(Solitaire *solitaire)
         float delay = 0.0f;
         if (cards[i].flags & FLAGS_TABLEU)
         {
-            delay = cards[i].index * 0.2f + 0.2f;
+            delay = cards[i].index * 0.2f + cards[i].pile * 0.025f + 0.2f;
         }
         else if (cards[i].flags & FLAGS_STOCK)
         {
             delay = (cards[i].zindex / 6) * 0.05f;
         }
+        audio_play_sfx_delay(SFX_DEAL_CARD, delay);
         animation_move_card_to(solitaire, i, 0, delay, positions_x[i], positions_y[i]);
     }
 }
@@ -386,21 +400,45 @@ void animation_reveal(Solitaire *solitaire, int tableu_x, int tableu_y)
     Card *card = solitaire->tableu[tableu_x][tableu_y];
     CardSprite *sprite = &cards[card_to_index(card)];
 
+    int reveal = 0;
+
     // note: if a card is revealed, there will be no next card.  if a card is hidden,
     // it will have no hitbox.  therefore we can pass '0.0' as card_vertical_spacing
-
     if (card->shown)
     {
         sprite->flags |= FLAGS_REVEALED;
         cards_place_with_hitbox(sprite, NULL, 0.0);
-        // start animation to show
+        reveal = 1;
     }
     else
     {
         sprite->flags &= ~FLAGS_REVEALED;
         cards_place_with_hitbox(sprite, solitaire->tableu[tableu_x][tableu_y + 1], 0.0);
-        // start animation to hide
+        reveal = -1;
     }
+
+    CardAnimationData *data = malloc(sizeof(CardAnimationData));
+    data->card = card_to_index(card);
+    data->reveal = reveal;
+    data->from_x = sprite->x;
+    data->from_y = sprite->y;
+    data->to_x = sprite->x;
+    data->to_y = sprite->x;
+    data->delay = 0;
+    data->progress = 0.0;
+    data->zindex = sprite->zindex;
+    data->duration = 1;
+
+    AnimationConfig config = {
+        .on_update = (AnimationUpdate)animation_update_reveal,
+        .on_cleanup = (AnimationCleanup)animation_cleanup,
+        .duration = data->duration,
+        .data = data,
+    };
+
+    anim_create(config, &sprite->animPtr);
+
+    sprite->flags |= FLAGS_ANIMATING;
 }
 
 /*
@@ -419,7 +457,7 @@ void animation_move(Solitaire *solitaire, Move move, MoveData data, int undo)
     case MOVE_CYCLE_STOCK:
     {
         animation_move_cycle_stock(solitaire, move, data, undo);
-        was_deal_stock = 1;
+        was_deal_stock = !undo;
         break;
     }
     }

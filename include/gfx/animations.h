@@ -5,10 +5,12 @@
 typedef struct CardAnimationData
 {
     int card;
+    int reveal;
     int from_x, from_y;
     int to_x, to_y;
     float delay;
     float duration;
+    float progress;
     int zindex;
 } CardAnimationData;
 

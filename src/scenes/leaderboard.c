@@ -5,6 +5,7 @@
 #include <raylib.h>
 #include <raylib-nuklear.h>
 #include <stdio.h>
+#include <time.h>
 
 int leaderboard_width;
 
@@ -61,12 +62,18 @@ void leaderboard_nk_score(struct nk_context *ctx, int index, LeaderboardEntry en
     nk_layout_row_push(ctx, leaderboard_width - 240);
     if (nk_group_begin(ctx, "Leaderboard Entry", 0))
     {
+        char timestamp[256];
+        time_t time = entry.achieved;
+        struct tm *local_time = localtime(&time);
+
+        strftime(timestamp, 256, "%A %d/%m/%Y %r", local_time);
+
         int entry_minutes = entry.time / 60;
         float entry_seconds = entry.time % 60;
         nk_layout_row_dynamic(ctx, 24, 1);
         nk_labelf(ctx, NK_TEXT_ALIGN_MIDDLE | NK_TEXT_ALIGN_LEFT, "Moves: %d, Time: %d:%02.03f, Score: %d.",
                   entry.moves, entry_minutes, entry_seconds, entry.score);
-        nk_labelf(ctx, NK_TEXT_ALIGN_MIDDLE | NK_TEXT_ALIGN_LEFT, "Achieved on: (timestamp here)");
+        nk_labelf(ctx, NK_TEXT_ALIGN_MIDDLE | NK_TEXT_ALIGN_LEFT, "Achieved on: %s", timestamp);
         nk_labelf(ctx, NK_TEXT_ALIGN_MIDDLE | NK_TEXT_ALIGN_LEFT, "Seed: %d", entry.seed);
         nk_group_end(ctx);
     }
@@ -79,7 +86,7 @@ void leaderboard_nk_score(struct nk_context *ctx, int index, LeaderboardEntry en
         nk_layout_row_dynamic(ctx, 24, 1);
         if (nk_button_label(ctx, "Play deal"))
         {
-            if (scene_is_on_stack(&GameScene))
+            if (scene_stack_pos(&GameScene) != -1)
             {
                 scene_pop_to(&GameScene);
             }

@@ -165,10 +165,7 @@ int solitaire_undo(Solitaire *solitaire)
     // DEPENDENCIES BEGIN
     if (move->type == MOVE_CYCLE_STOCK && !data->return_to_stock)
     {
-        for (int i = 0; i < data->cards_moved; i++)
-        {
-            audio_play_sfx_delay(SFX_DRAW_CARD, i * 0.2f);
-        }
+        audio_play_sfx(SFX_DEAL_CARD);
     }
     else
     {
@@ -283,7 +280,7 @@ int solitaire_redo(Solitaire *solitaire)
     {
         for (int i = 0; i < data->cards_moved; i++)
         {
-            audio_play_sfx_delay(SFX_DRAW_CARD, i * 0.2f);
+            audio_play_sfx_delay(SFX_DEAL_CARD, i * 0.2f);
         }
     }
     else

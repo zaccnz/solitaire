@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <toml.h>
 
 Licence *licences;
 int licence_count;
@@ -109,6 +108,21 @@ int licence_load(Licence *licence, toml_table_t *table)
     return licence_lines(licence);
 }
 
+void licence_free(Licence *licence)
+{
+    free(licence->name);
+    free(licence->buffer);
+    free(licence->lines);
+    if (licence->source)
+    {
+        free(licence->source);
+    }
+    if (licence->author)
+    {
+        free(licence->author);
+    }
+}
+
 void licences_load()
 {
     char *data = LoadFileText("res/licences.toml");
@@ -166,18 +180,7 @@ void licences_free()
 {
     for (int i = 0; i < licence_count; i++)
     {
-        Licence *licence = licences + i;
-        free(licence->name);
-        free(licence->buffer);
-        free(licence->lines);
-        if (licence->source)
-        {
-            free(licence->source);
-        }
-        if (licence->author)
-        {
-            free(licence->author);
-        }
+        licence_free(licences + i);
     }
 
     free(licences);

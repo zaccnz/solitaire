@@ -29,5 +29,7 @@ char *physfs_read_to_mem(const char *file, int *size);
 
 Color string_to_colour(char *value);
 
+void toggle_fullscreen();
+
 extern const char *SUITS[SUIT_MAX];
 extern const char *VALUE[VALUE_MAX];

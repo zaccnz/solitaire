@@ -8,7 +8,6 @@
 
 void emscripten_idbfs_prepare()
 {
-    printf("IDBFS pre-preparing\n");
 #if defined(PLATFORM_WEB)
     EM_ASM(
         Asyncify.handleSleep(complete => {
@@ -18,25 +17,22 @@ void emscripten_idbfs_prepare()
             // Then sync
             FS.syncfs(
                 true, function(err) {
-                    console.log('IDBFS prepared');
+                    console.log('IDBFS mount and sync complete');
                     complete();
                 });
         }););
 #endif
-    printf("IDBFS post-preparing\n");
 }
 
 void emscripten_idbfs_sync()
 {
-    printf("IDBFS pre-syncing\n");
 #if defined(PLATFORM_WEB)
     EM_ASM(
         Asyncify.handleSleep(complete => { FS.syncfs(
                                                 false, function(err) {
                                                     // Error
-                                                    console.log('IDBFS synced');
+                                                    console.log('IDBFS sync complete');
                                                     complete();
                                                 }); }););
 #endif
-    printf("IDBFS post-syncing\n");
 }

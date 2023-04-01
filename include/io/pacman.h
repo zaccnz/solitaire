@@ -12,6 +12,7 @@ typedef struct PackPointer
 void pacman_reload_packs();
 void pacman_free_packs();
 
+TexturePack *pacman_get_packs(int *count);
 // note: must free the result
 PackPointer *pacman_list_packs(int *count);
 

@@ -5,6 +5,7 @@
 #include "io/pacman.h"
 #include "util/util.h"
 
+#include <math.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -26,6 +27,14 @@ CardSprite back_sprite;
 DragAndDrop *dnd = NULL;
 int was_deal_stock = 0;
 float held = 0;
+
+Camera3D cam_3d = {
+    .projection = CAMERA_ORTHOGRAPHIC,
+    .position = {0.0f, 10.0f, 0.0f},
+    .target = {0.0f, 0.0f, 0.0f},
+    .up = {0.0f, 1.0f, 0.0f},
+    .fovy = 45.0f,
+};
 
 int sv_to_index(Suit suit, Value value)
 {
@@ -523,6 +532,17 @@ void cards_render(Solitaire *solitaire, struct nk_context *ctx)
         int index = sprite->suit * VALUE_MAX + sprite->value;
         Texture texture = assets_cards->cards[index];
 
+        float animating_reveal = 0.0f;
+
+        if (sprite->flags & FLAGS_ANIMATING)
+        {
+            CardAnimationData *data = anim_get_data(sprite->animPtr);
+            if (data && data->reveal)
+            {
+                animating_reveal = (float)data->reveal * data->progress;
+            }
+        }
+
         if (!(sprite->flags & FLAGS_REVEALED))
         {
             texture = assets_backs->card_back;
@@ -532,7 +552,15 @@ void cards_render(Solitaire *solitaire, struct nk_context *ctx)
         source.height = texture.height;
         dest.x = sprite->x;
         dest.y = sprite->y;
-        DrawTexturePro(texture, source, dest, origin, 0.0f, WHITE);
+
+        if (fabs(animating_reveal) > 0.001f)
+        {
+            // TODO: card reveal animation
+        }
+        else
+        {
+            DrawTexturePro(texture, source, dest, origin, 0.0f, WHITE);
+        }
     }
 }
 
@@ -624,7 +652,7 @@ void cards_position_sprites(Solitaire *solitaire, int animate)
         animation_origins[update_count].x = sprite->x;
         animation_origins[update_count].y = sprite->y;
         animation_is_behind[update_count] = talon_len - i > 3;
-        if (!animation_is_behind[update_count] && was_deal_stock)
+        if (!animation_is_behind[update_count] && was_deal_stock && solitaire->config.deal_three)
         {
             animation_delays[update_count] = 0.4f - min(talon_len - i - 1, 3) * 0.2f;
         }

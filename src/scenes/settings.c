@@ -24,6 +24,13 @@ struct DropdownData
 int settings_was_opened = 0;
 int settings_panel_width = 0;
 
+struct nk_image card_textures[MAX_CARDS + 1]; // card_textures[MAX_CARDS] = back texture
+
+struct
+{
+    float card, back;
+} aspect_ratio;
+
 typedef enum SETTINGSPAGES
 {
     PAGE_GAME = 0,
@@ -103,17 +110,47 @@ void settings_refresh_dropdown()
     }
 }
 
+void settings_unload_textures()
+{
+    /*
+    for (int i = 0; i < MAX_CARDS + 1; i++)
+    {
+        UnloadNuklearImage(card_textures[i]);
+    }*/
+}
+
+void settings_refresh_textures(int first)
+{
+    if (!first)
+    {
+        settings_unload_textures();
+    }
+
+    Assets *backs_current_assets = pacman_get_current_assets(ASSET_BACKS);
+    Assets *cards_current_assets = pacman_get_current_assets(ASSET_CARDS);
+    for (int i = 0; i < MAX_CARDS; i++)
+    {
+        card_textures[i] = TextureToNuklear(cards_current_assets->cards[i]);
+    }
+    card_textures[MAX_CARDS] = TextureToNuklear(backs_current_assets->card_back);
+
+    aspect_ratio.card = (float)cards_current_assets->cards[0].width / (float)cards_current_assets->cards[0].height;
+    aspect_ratio.back = (float)backs_current_assets->card_back.width / (float)backs_current_assets->card_back.height;
+}
+
 void settings_start()
 {
     printf("started settings scene\n");
     settings_was_opened = 1;
     settings_page = PAGE_GAME;
     settings_refresh_dropdown();
+    settings_refresh_textures(1);
 }
 
 void settings_stop()
 {
     printf("stopped settings scene\n");
+    settings_unload_textures();
 }
 
 void settings_update(float dt, int background)
@@ -189,6 +226,9 @@ void settings_render_texture_packs(struct nk_context *ctx)
     settings_nk_draw_dropdown(ctx, "Background", ASSET_BACKGROUNDS, &background_data);
     settings_nk_draw_dropdown(ctx, "Card Back", ASSET_BACKS, &backs_data);
     settings_nk_draw_dropdown(ctx, "Cards", ASSET_CARDS, &cards_data);
+
+    nk_layout_row_dynamic(ctx, 30, 1);
+    nk_image_color(ctx, card_textures[0], nk_rgb(255, 255, 255));
 }
 
 void settings_render_debug(struct nk_context *ctx)
@@ -229,6 +269,44 @@ void settings_render_debug(struct nk_context *ctx)
     nk_label_wrap(ctx, "The above seed will be used for your next deal");
 }
 
+void settings_nk_licence(struct nk_context *ctx, Licence licence, int index, int row_wrap_height)
+{
+    nk_layout_row_dynamic(ctx, row_wrap_height, 1);
+
+    if (index > 0)
+    {
+        nk_spacer(ctx);
+    }
+
+    if (licence.author)
+    {
+        nk_labelf_wrap(ctx, "%s | %s", licence.name, licence.author);
+    }
+    else
+    {
+        nk_label_wrap(ctx, licence.name);
+    }
+
+    if (licence.source)
+    {
+        nk_label_wrap(ctx, licence.source);
+    }
+    nk_layout_row_begin(ctx, NK_DYNAMIC, 300, 2);
+    nk_layout_row_push(ctx, 0.9);
+    if (nk_group_begin(ctx, licence.name, NK_WINDOW_BORDER))
+    {
+        nk_layout_row_dynamic(ctx, row_wrap_height, 1);
+        for (int i = 0; i < licence.line_count; i++)
+        {
+            nk_label_wrap(ctx, licence.lines[i]);
+        }
+        nk_group_end(ctx);
+    }
+    nk_layout_row_push(ctx, 0.1);
+    nk_spacer(ctx);
+    nk_layout_row_end(ctx);
+}
+
 void settings_render_oss(struct nk_context *ctx)
 {
     // Nuklear Styles
@@ -246,41 +324,16 @@ void settings_render_oss(struct nk_context *ctx)
     Licence *licences = licences_get(&count);
     for (int i = 0; i < count; i++)
     {
-        Licence licence = licences[i];
-        nk_layout_row_dynamic(ctx, row_wrap_height, 1);
-
-        if (i > 0)
+        settings_nk_licence(ctx, licences[i], i, row_wrap_height);
+    }
+    TexturePack *packs = pacman_get_packs(&count);
+    for (int i = 0; i < count; i++)
+    {
+        if (packs[i].licence.name == 0)
         {
-            nk_spacer(ctx);
+            continue;
         }
-
-        if (licence.source)
-        {
-            nk_labelf_wrap(ctx, "%s | %s", licence.name, licence.source);
-        }
-        else
-        {
-            nk_label_wrap(ctx, licence.name);
-        }
-
-        if (licence.author)
-        {
-            nk_label_wrap(ctx, licence.author);
-        }
-        nk_layout_row_begin(ctx, NK_DYNAMIC, 300, 2);
-        nk_layout_row_push(ctx, 0.9);
-        if (nk_group_begin(ctx, licence.name, NK_WINDOW_BORDER))
-        {
-            nk_layout_row_dynamic(ctx, row_wrap_height, 1);
-            for (int i = 0; i < licence.line_count; i++)
-            {
-                nk_label_wrap(ctx, licence.lines[i]);
-            }
-            nk_group_end(ctx);
-        }
-        nk_layout_row_push(ctx, 0.1);
-        nk_spacer(ctx);
-        nk_layout_row_end(ctx);
+        settings_nk_licence(ctx, packs[i].licence, 1, row_wrap_height);
     }
 
     // Reset Nuklear styles

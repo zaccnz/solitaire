@@ -2,6 +2,7 @@
 
 #include "gfx/cards.h"
 #include "gfx/layout.h"
+#include "scenes/scene.h"
 #include "io/config.h"
 
 #include <physfs.h>
@@ -87,6 +88,7 @@ void pacman_reload_packs()
     int count = 0;
     char **files = GetDirectoryFiles("packs", &count);
     packs = malloc(sizeof(TexturePack) * (count + 1));
+    memset(packs, 0, sizeof(TexturePack) * (count + 1));
 
     pack_load_default(&packs[0]);
     pack_count = 1;
@@ -202,6 +204,12 @@ void pacman_free_packs()
     }
 }
 
+TexturePack *pacman_get_packs(int *count)
+{
+    *count = pack_count;
+    return packs;
+}
+
 PackPointer *pacman_list_packs(int *count)
 {
     *count = 0;
@@ -294,6 +302,11 @@ void pacman_set_current(PackPointer pointer, AssetType as)
     {
         layout_pack_changed();
         cards_invalidate_all();
+    }
+
+    if (as & (ASSET_CARDS | ASSET_BACKS) && scene_stack_pos(&SettingsScene) >= 0)
+    {
+        settings_refresh_textures(0);
     }
 }
 

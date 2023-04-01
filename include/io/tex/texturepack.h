@@ -2,6 +2,7 @@
 
 #include "io/tex/spritesheet.h"
 #include "io/tex/assets.h"
+#include "io/licences.h"
 #include "solitaire.h"
 
 #include <raylib.h>
@@ -17,6 +18,7 @@ typedef struct TexturePack
     Assets **assets;
     int assets_count;
     int assets_size;
+    Licence licence;
 } TexturePack;
 
 int pack_load_default(TexturePack *pack);

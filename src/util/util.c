@@ -1,5 +1,7 @@
 #include "util/util.h"
 
+#include "io/config.h"
+
 #include <physfs.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -189,4 +191,32 @@ Color string_to_colour(char *value)
     }
 
     return GetColor(hex);
+}
+
+void toggle_fullscreen()
+{
+    int was_fullscreen = IsWindowFullscreen();
+
+    if (was_fullscreen)
+    {
+        SetWindowSize(config.window_size.width, config.window_size.height);
+    }
+    else
+    {
+        SetWindowSize(2560, 1440);
+    }
+
+    ToggleFullscreen();
+
+    if (was_fullscreen)
+    {
+        printf("leaving fullscreen... (%d,%d)\n", config.window_size.width, config.window_size.height);
+        SetWindowSize(config.window_size.width, config.window_size.height);
+        SetWindowPosition(30, 30);
+    }
+    else
+    {
+        printf("entering fullscreen...\n");
+        SetWindowSize(2560, 1440);
+    }
 }

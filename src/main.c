@@ -9,6 +9,7 @@
 #include "scenes/scene.h"
 #include "sfx/audio.h"
 #include "util/emscripten.h"
+#include "util/util.h"
 
 #include <physfs.h>
 #include <raylib.h>
@@ -32,9 +33,13 @@ void loop()
 
     if (IsWindowResized())
     {
-        config.window_size.width = GetScreenWidth();
-        config.window_size.height = GetScreenHeight();
-        config_save();
+        if (!IsWindowFullscreen())
+        {
+            printf("updating window width, height (%d,%d)\n", config.window_size.width, config.window_size.height);
+            config.window_size.width = GetScreenWidth();
+            config.window_size.height = GetScreenHeight();
+            config_save();
+        }
         layout_resize();
         anim_resize();
     }
@@ -73,13 +78,16 @@ int main(int argc, char **argv)
     licences_load();
 
     // init raylib
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
+    int width = config.window_size.width;
+    int height = config.window_size.height;
     if (config.fullscreen)
     {
         SetConfigFlags(FLAG_FULLSCREEN_MODE);
+        width = 0, height = 0;
     }
 
-    InitWindow(config.window_size.width, config.window_size.height, "solitaire");
+    InitWindow(width, height, "solitaire");
     SetExitKey(KEY_NULL);
 
     Font font = LoadFontEx("res/font/roboto/Roboto-Medium.ttf", 20, 0, 250);
@@ -92,17 +100,16 @@ int main(int argc, char **argv)
 
     // init game components
     pacman_reload_packs();
-    printf("hello world\n");
     audio_init();
     cards_init();
     scene_push(&MenuScene);
-    // scene_push(&GameScene); // TODO: remove when complete
+    scene_update(0.0);
     layout_resize();
 
 #if defined(PLATFORM_WEB)
     emscripten_set_main_loop(loop, 0, 1);
 #else
-    while (!WindowShouldClose())
+    while (!WindowShouldClose() && scene_count > 0)
     {
         loop();
     }
@@ -110,7 +117,6 @@ int main(int argc, char **argv)
 
     // cleanup game components
     anim_release();
-
     scene_pop_all();
     cards_free();
     audio_free();

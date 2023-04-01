@@ -61,9 +61,7 @@ int pack_load_default_assets(TexturePack *pack)
 
     pack->assets[0] = malloc(sizeof(Assets));
     pack->assets[0]->type = ASSET_CARDS;
-    pack->assets[0]->name = malloc(256);
-    memset(pack->assets[0]->name, 0, 256);
-    strncpy(pack->assets[0]->name, "Default", 256);
+    pack->assets[0]->name = strdup("Default");
 
     for (int i = 0; i < SUIT_MAX; i++)
     {
@@ -79,9 +77,7 @@ int pack_load_default_assets(TexturePack *pack)
         pack->assets[i + 1] = malloc(sizeof(Assets));
         Assets *assets = pack->assets[i + 1];
         assets->type = ASSET_BACKS;
-        assets->name = malloc(256);
-        memset(assets->name, 0, 256);
-        strncpy(assets->name, DEFAULT_BACK_ASSET_NAMES[i], 256);
+        assets->name = strdup(DEFAULT_BACK_ASSET_NAMES[i]);
         snprintf(path, 256, "res/tex/Cards/cardBack_%s.png", DEFAULT_BACK_NAMES[i]);
         assets->card_back = LoadTexture(path);
     }
@@ -91,15 +87,9 @@ int pack_load_default_assets(TexturePack *pack)
 
 int pack_load_default(TexturePack *pack)
 {
-    pack->name = malloc(256);
-    memset(pack->name, 0, 256);
-    strncpy(pack->name, "Internal", 256);
-    pack->author = malloc(256);
-    memset(pack->author, 0, 256);
-    strncpy(pack->author, "Kenney", 256);
-    pack->path = malloc(256);
-    memset(pack->path, 0, 256);
-    strncpy(pack->path, "res/tex", 256);
+    pack->name = strdup("Internal");
+    pack->author = strdup("Kenney");
+    pack->path = strdup("res/tex");
 
     pack->card_vertical_spacing = 0.3f;
 
@@ -565,6 +555,12 @@ int pack_load(const char *path, TexturePack *pack)
         return 0;
     }
 
+    toml_table_t *licence = toml_table_in(pack_toml, "licence");
+    if (licence)
+    {
+        licence_load(&pack->licence, licence);
+    }
+
     toml_array_t *spritesheets = toml_array_in(pack_toml, "spritesheets");
     if (spritesheets && !spritesheet_load_all(spritesheets, pack))
     {
@@ -622,6 +618,11 @@ int pack_free(TexturePack *pack)
     for (int i = 0; i < pack->assets_count; i++)
     {
         assets_free(pack->assets[i]);
+    }
+
+    if (pack->licence.name)
+    {
+        licence_free(&pack->licence);
     }
 
     free(pack->name);

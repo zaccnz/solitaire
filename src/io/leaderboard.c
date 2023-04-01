@@ -152,7 +152,7 @@ void leaderboard_save()
         toml_writer_pop_key(writer);
     }
 
-    toml_writer_save(writer, "cfg/leaderboard.toml");
+    toml_writer_save(writer, LEADERBOARD_FILE_PATH);
     toml_writer_free(writer);
 }
 

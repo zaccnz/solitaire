@@ -119,8 +119,6 @@ void toml_writer_free(TOML_Writer *writer)
 int toml_writer_save(TOML_Writer *writer, char *filename)
 {
     int result = SaveFileText(filename, writer->buffer);
-    printf("toml_writer_save()\n%s\n", writer->buffer);
-
     emscripten_idbfs_sync();
 
     return result;
@@ -132,8 +130,7 @@ int toml_writer_push_key(TOML_Writer *writer, char *key, int array)
     memset(writer_key, 0, sizeof(TOML_Writer_Key));
 
     int key_len = strlen(key) + 1;
-    writer_key->name = malloc(key_len);
-    strncpy(writer_key->name, key, key_len);
+    writer_key->name = strdup(key);
     writer_key->is_array = array;
 
     if (writer->current != NULL)

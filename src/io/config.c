@@ -1,6 +1,7 @@
 #include "io/config.h"
 
 #include "util/toml_writer.h"
+#include "util/util.h"
 
 #include <raylib.h>
 #include <stdio.h>
@@ -53,6 +54,8 @@ const Config DEFAULT_CONFIG = {
 };
 
 Config config = {0};
+
+int was_fullscreen = 0;
 
 int config_try_load_solitaire(toml_table_t *solitaire)
 {
@@ -247,7 +250,6 @@ void config_load()
     config_push_pack(&config.textures.cards, CFG_DEFAULT_PACK, CFG_DEFAULT_TEXTURE_NAME);
 
     char *data = LoadFileText(CONFIG_FILE_PATH);
-    printf("config_load()\n%s\n", data);
 
     if (!data)
     {
@@ -268,6 +270,8 @@ void config_load()
     config_from_toml(config_toml);
 
     toml_free(config_toml);
+
+    was_fullscreen = config.fullscreen;
 }
 
 void config_free()
@@ -300,8 +304,7 @@ void config_push_pack(struct TextureConfig *texture, char *pack, char *texture_n
         {
             free(texture->pack);
         }
-        texture->pack = malloc(256);
-        strncpy(texture->pack, pack, 256);
+        texture->pack = strdup(pack);
     }
 
     if (texture_name)
@@ -310,13 +313,20 @@ void config_push_pack(struct TextureConfig *texture, char *pack, char *texture_n
         {
             free(texture->texture_name);
         }
-        texture->texture_name = malloc(256);
-        strncpy(texture->texture_name, texture_name, 256);
+        texture->texture_name = strdup(texture_name);
     }
 }
 
 void config_save()
 {
+    printf("saving config...\n");
+    if (was_fullscreen != config.fullscreen)
+    {
+        printf("toggling fullscreen...\n");
+        toggle_fullscreen();
+        was_fullscreen = config.fullscreen;
+    }
+
     TOML_Writer *writer = toml_writer_new();
 
     toml_writer_push_boolean(writer, "animations", config.animations);
