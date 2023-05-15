@@ -169,9 +169,9 @@ void settings_update(float dt, int background)
 void settings_nk_draw_dropdown(struct nk_context *ctx, char *name, AssetType type, struct DropdownData *data)
 {
     nk_label(ctx, name, NK_TEXT_LEFT);
-    nk_layout_row_static(ctx, 25, 200, 1);
+    nk_layout_row_static(ctx, 25, 300, 1);
     int current = nk_combo(ctx, data->avail, data->length,
-                           data->last, 25, nk_vec2(200, 200));
+                           data->last, 25, nk_vec2(300, 200));
 
     if (current != data->last)
     {
@@ -197,10 +197,12 @@ void settings_render_game(struct nk_context *ctx)
     }
     nk_spacer(ctx);
     nk_label(ctx, "Application", NK_TEXT_ALIGN_LEFT);
+#ifndef PLATFORM_WEB
     if (nk_checkbox_label(ctx, "Fullscreen", &config.fullscreen))
     {
         config_save();
     }
+#endif
     if (nk_checkbox_label(ctx, "Animations", &config.animations))
     {
         config_save();
@@ -227,8 +229,23 @@ void settings_render_texture_packs(struct nk_context *ctx)
     settings_nk_draw_dropdown(ctx, "Card Back", ASSET_BACKS, &backs_data);
     settings_nk_draw_dropdown(ctx, "Cards", ASSET_CARDS, &cards_data);
 
-    nk_layout_row_dynamic(ctx, 30, 1);
-    nk_image_color(ctx, card_textures[0], nk_rgb(255, 255, 255));
+    float column_widths[VALUE_MAX + 1] = {50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0};
+
+    nk_layout_row_dynamic(ctx, (50 / aspect_ratio.card) * 4 + 50, 1);
+    if (nk_group_begin(ctx, "card textures", 0))
+    {
+        nk_layout_row(ctx, NK_STATIC, 50 / aspect_ratio.card, VALUE_MAX + 1, column_widths);
+        for (int i = 0; i < SUIT_MAX; i++)
+        {
+            nk_image_color(ctx, card_textures[MAX_CARDS], nk_rgb(255, 255, 255));
+
+            for (int j = 0; j < VALUE_MAX; j++)
+            {
+                nk_image_color(ctx, card_textures[i * VALUE_MAX + j], nk_rgb(255, 255, 255));
+            }
+        }
+        nk_group_end(ctx);
+    }
 }
 
 void settings_render_debug(struct nk_context *ctx)

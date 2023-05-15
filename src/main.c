@@ -107,6 +107,8 @@ int main(int argc, char **argv)
     layout_resize();
 
 #if defined(PLATFORM_WEB)
+    EM_ASM(
+        setApplicationReady(););
     emscripten_set_main_loop(loop, 0, 1);
 #else
     while (!WindowShouldClose() && scene_count > 0)
@@ -140,3 +142,10 @@ int main(int argc, char **argv)
 
     return 0;
 }
+
+#if defined(PLATFORM_WEB)
+EMSCRIPTEN_KEEPALIVE void resize_event(int width, int height)
+{
+    SetWindowSize(width, height);
+}
+#endif

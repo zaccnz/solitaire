@@ -46,8 +46,8 @@ const char *DEFAULT_BACK_ASSET_NAMES[3] = {
 
 const char *DEFAULT_BACK_NAMES[3] = {
     "blue1",
-    "green1",
     "red1",
+    "green1",
 };
 
 int pack_load_default_assets(TexturePack *pack)

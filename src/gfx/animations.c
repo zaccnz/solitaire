@@ -13,6 +13,8 @@
 #include <stdlib.h>
 #include <math.h>
 
+typedef void (*GameEndPlaceCard)(int index, int *card, Vector2 *position, float *delay);
+
 UnitBezier card_move_bezier;
 
 void animations_init()
@@ -65,6 +67,10 @@ int animation_cleanup(int completed, CardAnimationData *data)
     if (!data->reveal)
     {
         sprite->zindex = data->zindex;
+    }
+    else
+    {
+        sprite->flags |= FLAGS_INVALIDATED;
     }
     sprite->x = data->to_x;
     sprite->y = data->to_y;
@@ -423,11 +429,11 @@ void animation_reveal(Solitaire *solitaire, int tableu_x, int tableu_y)
     data->from_x = sprite->x;
     data->from_y = sprite->y;
     data->to_x = sprite->x;
-    data->to_y = sprite->x;
+    data->to_y = sprite->y;
     data->delay = 0;
     data->progress = 0.0;
     data->zindex = sprite->zindex;
-    data->duration = 1;
+    data->duration = 0.3;
 
     AnimationConfig config = {
         .on_update = (AnimationUpdate)animation_update_reveal,
@@ -466,6 +472,10 @@ void animation_move(Solitaire *solitaire, Move move, MoveData data, int undo)
 /* STANDALONE ANIMATION HELPERS */
 int standalone_render(float progress, StandaloneAnimationData *data)
 {
+    if (data->elapsed < data->delay)
+    {
+        return 1;
+    }
     Assets *card_assets = pacman_get_current_assets(ASSET_CARDS);
     Texture tex = card_assets->cards[data->card];
 
@@ -489,10 +499,11 @@ int standalone_render(float progress, StandaloneAnimationData *data)
     return 1;
 }
 
-void standalone_resize(int sw, int sh, StandaloneAnimationData *data)
+int standalone_resize(int sw, int sh, StandaloneAnimationData *data)
 {
     data->sw = sw;
     data->sh = sh;
+    return 0;
 }
 
 int standalone_cleanup(int complete, StandaloneAnimationData *data)
@@ -534,6 +545,7 @@ void animation_main_menu()
         data->x = (sw - 4 * (cw + card_pad)) / 2 + (i * (cw + card_pad));
         data->y = (sh - (ch * 3)) / 2;
         data->elapsed = i * 0.5f;
+        data->delay = 0;
         data->sw = sw;
         data->sh = sh;
         data->index = i;
@@ -554,21 +566,98 @@ void animation_main_menu()
 /* STANDALONE ANIMATION - GAME END ANIMATIONS */
 #define GAME_END_ANIMATION_COUNT 1
 
-void standalone_update_game_end_1(float progress, StandaloneAnimationData *data)
+typedef struct GameEndData1
 {
+} GameEndData1;
+
+Vector2 game_end_1_position(int index)
+{
+    int suit = index % SUIT_MAX;
+
+    CalcOut origin;
+    layout_calculate(LAYOUT_FOUNDATION, &suit, &origin);
+
+    return (Vector2){0.0, 0.0};
+}
+
+int game_end_1_update(float progress, StandaloneAnimationData *data)
+{
+    data->elapsed += progress;
+    return 1;
+}
+
+int game_end_1_resize(int width, int height, StandaloneAnimationData *data)
+{
+    Vector2 pos = game_end_1_position(data->index);
+    data->x = pos.x;
+    data->y = pos.y;
+    data->sw = width;
+    data->sh = height;
+    return 0;
+}
+
+void game_end_1_place_card(int index, int *card, Vector2 *position, float *delay)
+{
+    int suit = index % SUIT_MAX;
+    int suit_card = index / SUIT_MAX;
+
+    *card = suit * VALUE_MAX + KING;
+    *delay = suit_card * 0.1;
+    *position = game_end_1_position(index);
 }
 
 const AnimationUpdate GAME_END_ANIMATIONS[GAME_END_ANIMATION_COUNT] = {
-    (AnimationUpdate)standalone_update_game_end_1,
+    (AnimationUpdate)game_end_1_update,
+};
+const AnimationResize GAME_END_ANIMATIONS_RESIZE[GAME_END_ANIMATION_COUNT] = {
+    (AnimationResize)game_end_1_resize,
+};
+const GameEndPlaceCard GAME_END_ANIMATIONS_PLACE_CARD[GAME_END_ANIMATION_COUNT] = {
+    (GameEndPlaceCard)game_end_1_place_card,
+};
+const size_t GAME_END_ANIMATIONS_EXTRA_DATA[GAME_END_ANIMATION_COUNT] = {
+    sizeof(GameEndData1),
 };
 const int GAME_END_ANIMATIONS_CARD_COUNT[GAME_END_ANIMATION_COUNT] = {
-    MAX_CARDS,
-};
-const Vector2 GAME_END_ANIMATIONS_CARD_START[GAME_END_ANIMATION_COUNT] = {
-    {.x = 0, .y = 0},
+    MAX_CARDS * 24,
 };
 
 void animation_game_end()
 {
-    // pick random number 0<= n < GAME_END_ANIMATION_COUNT
+    int sw = GetScreenWidth(), sh = GetScreenHeight();
+
+    int animation = rand() % GAME_END_ANIMATION_COUNT;
+
+    int cards = GAME_END_ANIMATIONS_CARD_COUNT[animation];
+    GameEndPlaceCard place_func = GAME_END_ANIMATIONS_PLACE_CARD[animation];
+    AnimationUpdate update_func = GAME_END_ANIMATIONS[animation];
+    AnimationResize resize_func = GAME_END_ANIMATIONS_RESIZE[animation];
+    if (!resize_func)
+    {
+        resize_func = (AnimationResize)standalone_resize;
+    }
+
+    for (int i = 0; i < cards; i++)
+    {
+        Vector2 pos;
+        StandaloneAnimationData *data = malloc(sizeof(StandaloneAnimationData) + GAME_END_ANIMATIONS_EXTRA_DATA[i]);
+        place_func(i, &data->card, &pos, &data->delay);
+        data->x = pos.x;
+        data->y = pos.y;
+        data->elapsed = 0;
+        data->sw = sw;
+        data->sh = sh;
+        data->index = i;
+
+        AnimationConfig cfg = {
+            .on_update = update_func,
+            .on_render = (AnimationRender)standalone_render,
+            .on_resize = resize_func,
+            .on_cleanup = (AnimationCleanup)standalone_cleanup,
+            .duration = 0,
+            .data = data,
+        };
+
+        anim_create(cfg, NULL);
+    }
 }

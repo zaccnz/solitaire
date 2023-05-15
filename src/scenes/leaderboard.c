@@ -118,12 +118,13 @@ void leaderboard_render(struct nk_context *ctx)
     int leaderboard_height = height - (border * 2);
     if (nk_begin(ctx, "Leaderboard", nk_rect(border, border, leaderboard_width, leaderboard_height), NK_WINDOW_BORDER | NK_WINDOW_TITLE))
     {
-        leaderboard_nk_best_scores(ctx);
-
-        nk_layout_row_dynamic(ctx, 40, 1);
-        nk_spacing(ctx, 1);
         if (leaderboard.entry_count > 0)
         {
+            leaderboard_nk_best_scores(ctx);
+
+            nk_layout_row_dynamic(ctx, 40, 1);
+            nk_spacing(ctx, 1);
+
             nk_labelf(ctx, NK_TEXT_ALIGN_MIDDLE | NK_TEXT_ALIGN_CENTERED, "Top %d deal%s by score",
                       leaderboard.entry_count, leaderboard.entry_count == 1 ? "" : "s");
             nk_layout_row_dynamic(ctx, leaderboard_height - 300, 1);
@@ -144,6 +145,8 @@ void leaderboard_render(struct nk_context *ctx)
         }
         else
         {
+            nk_layout_row_dynamic(ctx, 40, 1);
+            nk_spacing(ctx, 1);
             nk_label(ctx, "You have not completed any deals.", NK_TEXT_ALIGN_MIDDLE | NK_TEXT_ALIGN_CENTERED);
         }
 

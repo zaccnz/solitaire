@@ -28,6 +28,7 @@ typedef struct StandaloneAnimationData
     int x, y;
     int index;
     float elapsed;
+    float delay;
     int sw, sh;
 } StandaloneAnimationData;
 

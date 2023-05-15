@@ -9,6 +9,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <raymath.h>
+#include <rlgl.h>
 
 #define CLICK_TIME 0.2f
 
@@ -28,12 +30,14 @@ DragAndDrop *dnd = NULL;
 int was_deal_stock = 0;
 float held = 0;
 
+Model card_model;
+
 Camera3D cam_3d = {
     .projection = CAMERA_ORTHOGRAPHIC,
-    .position = {0.0f, 10.0f, 0.0f},
+    .position = {10.0f, 0.0f, 0.0f},
     .target = {0.0f, 0.0f, 0.0f},
     .up = {0.0f, 1.0f, 0.0f},
-    .fovy = 45.0f,
+    .fovy = 10.0f,
 };
 
 int sv_to_index(Suit suit, Value value)
@@ -77,6 +81,8 @@ void cards_init()
     back_sprite.animPtr.index = -1;
     back_sprite.animPtr.generation = -1;
     back_sprite.index = -1;
+
+    card_model = LoadModelFromMesh(GenMeshPlane(1, 1, 5, 5));
 
     animations_init();
 }
@@ -467,7 +473,52 @@ void cards_render_empty_pile(LayoutPosition pos, void *data, Assets *bg_assets)
 int cards_is_animating(Card card)
 {
     int index = card_to_index(&card);
-    return cards[index].flags & FLAGS_ANIMATING;
+    if (cards[index].flags & FLAGS_ANIMATING)
+    {
+        CardAnimationData *data = (CardAnimationData *)anim_get_data(cards[index].animPtr);
+        if (data)
+        {
+            return !data->reveal;
+        }
+    }
+    return false;
+}
+
+void card_render_revealing(Rectangle dest, float progress, int revealing, Texture *front, Texture *back)
+{
+    // Custon BeginMode3D
+    rlDrawRenderBatchActive();
+    rlMatrixMode(RL_PROJECTION);
+    rlPushMatrix();
+    rlLoadIdentity();
+    rlOrtho(0.0, GetRenderWidth(), GetRenderHeight(), 0.0, -100.0, 100.0);
+    rlMatrixMode(RL_MODELVIEW);
+    rlLoadIdentity();
+    rlMultMatrixf(MatrixToFloat(GetCameraMatrix(cam_3d)));
+
+    // Render backside of revealing card
+    card_model.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = revealing > 0 ? *back : *front;
+    rlPushMatrix();
+    rlTranslatef(0.0, dest.y + (dest.height / 2), -(dest.x + (dest.width / 2))); // Translate into position
+    rlRotatef(progress * 180.0f, 0.0, 1.0, 0.0);                                 // Rotate (reveal flip)
+    rlScalef(1.0, dest.height, dest.width);                                      // Scale to size of card
+    rlRotatef(90.0, 0.0, 0.0, 1.0);                                              // Rotate (towards camera camera)
+    rlRotatef(90.0, 0.0, 1.0, 0.0);                                              // Rotate (texture)
+    DrawModel(card_model, (Vector3){0.0, 0.0, 0.0}, 1.0, WHITE);
+    rlPopMatrix();
+
+    // Render frontside of revealing card
+    card_model.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = revealing > 0 ? *front : *back;
+    rlPushMatrix();
+    rlTranslatef(0.0, dest.y + (dest.height / 2), -(dest.x + (dest.width / 2))); // Translate into position
+    rlRotatef(progress * 180.0f, 0.0, 1.0, 0.0);                                 // Rotate (reveal flip)
+    rlScalef(1.0, dest.height, dest.width);                                      // Scale to size of card
+    rlRotatef(-90.0, 0.0, 0.0, 1.0);                                             // Rotate (away from camera)
+    rlRotatef(-90.0, 0.0, 1.0, 0.0);                                             // Rotate (texture)
+    DrawModel(card_model, (Vector3){0.0, 0.0, 0.0}, 1.0, WHITE);
+    rlPopMatrix();
+
+    EndMode3D();
 }
 
 void cards_render(Solitaire *solitaire, struct nk_context *ctx)
@@ -533,6 +584,7 @@ void cards_render(Solitaire *solitaire, struct nk_context *ctx)
         Texture texture = assets_cards->cards[index];
 
         float animating_reveal = 0.0f;
+        int reveal_direction = 0;
 
         if (sprite->flags & FLAGS_ANIMATING)
         {
@@ -540,6 +592,7 @@ void cards_render(Solitaire *solitaire, struct nk_context *ctx)
             if (data && data->reveal)
             {
                 animating_reveal = (float)data->reveal * data->progress;
+                reveal_direction = data->reveal;
             }
         }
 
@@ -556,6 +609,9 @@ void cards_render(Solitaire *solitaire, struct nk_context *ctx)
         if (fabs(animating_reveal) > 0.001f)
         {
             // TODO: card reveal animation
+            // https://www.raylib.com/examples/models/loader.html?name=models_mesh_generation
+            printf("animating reveal (%.2f)\n", animating_reveal);
+            card_render_revealing(dest, animating_reveal, reveal_direction, &assets_cards->cards[index], &assets_backs->card_back);
         }
         else
         {
@@ -709,6 +765,11 @@ void cards_position_sprites(Solitaire *solitaire, int animate)
 
         if (card->flags & FLAGS_ANIMATING)
         {
+            CardAnimationData *data = anim_get_data(card->animPtr);
+            if (data && data->reveal)
+            {
+                continue;
+            }
             anim_cancel(card->animPtr);
         }
 
