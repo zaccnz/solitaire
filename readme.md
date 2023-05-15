@@ -1,6 +1,7 @@
 # 🃏 c solitaire
   
 a small solitaire game programmed in C using [raylib](https://www.raylib.com/)  
+play it online at [zaccnz.github.io/solitaire](https://zaccnz.github.io/solitaire/)  
 
 ## technologies
 - [raylib](https://github.com/raysan5/raylib)  
