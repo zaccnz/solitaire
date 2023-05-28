@@ -1,5 +1,7 @@
 # 🃏 c solitaire
   
+![Gameplay Demo](repo/recording.gif)
+
 a small solitaire game programmed in C using [raylib](https://www.raylib.com/)  
 play it online at [zaccnz.github.io/solitaire](https://zaccnz.github.io/solitaire/)  
 
@@ -10,14 +12,22 @@ play it online at [zaccnz.github.io/solitaire](https://zaccnz.github.io/solitair
 - [tomlc99](https://github.com/cktan/tomlc99)  
 - [CMake](https://cmake.org/)  
 
+## features
+- animated movement
+- texture pack system
+- timer and score
+- leaderboard
+- undo and redo
+- web assembly build
+
 ## resources
 - [2D Poker Pack](https://screamingbrainstudios.itch.io/poker-pack) - Screaming Brain Studios  
 - [8Bit Deck Card Assets](https://drawsgood.itch.io/8bit-deck-card-assets) - DrawsGood
 - [Card Asset Pack](https://natomarcacini.itch.io/card-asset-pack) - natomarcacini
 - [Fantasy Card Game SFX Pack](https://olexmazur.itch.io/fantasy-card-game) - Olex Mazur  
+- [Roboto](https://fonts.google.com/specimen/Roboto) - Google Fonts  
 - WebKit WebCore's [UnitBezier.h](https://github.com/WebKit/WebKit/blob/main/Source/WebCore/platform/graphics/UnitBezier.h)  
 - Solitaire Scoring from [lkcl](https://hands.com/~lkcl/hp6915/Dump/Files/soltr.htm)
-- [Roboto](https://fonts.google.com/specimen/Roboto) - Google Fonts
 
 ## build instructions
 
